@@ -1,6 +1,6 @@
 # variousplug[vp] - 様々なDockerホストへのプラグ
 
-`vp`は[fireplug](https://github.com/koheiw/fireplug)をベースに、[vast.ai](https://vast.ai)と[runPod](https://www.runpod.io/)をサポートするように再構築されたコマンドラインインターフェース（CLI）ツールです。
+`vp`は[fireplug](https://github.com/koheiw/fireplug)をベースに、[vast.ai](https://vast.ai)と[RunPod](https://runpod.io)をサポートするように再構築されたコマンドラインインターフェース（CLI）ツールです。
 
 ## 機能
 
@@ -13,15 +13,28 @@
 - 🧪 **包括的テスト** - CI/CDを含む完全なテストスイート
 - 🔧 **モダンツール** - Ruffリンター、GitHub Actions、Python 3.11+
 
-## インストール
+## はじめに
+
+### 1. プラットフォームアカウントの作成
+
+VariousPlugを使用する前に、プラットフォームのアカウントが必要です：
+
+- **[vast.aiに登録](https://cloud.vast.ai/?ref_id=85456)** *(紹介リンク)* - スポット価格でコスト効率的なGPUインスタンス
+  - *直接リンク: [vast.ai](https://vast.ai)*
+- **[RunPodに登録](https://runpod.io?ref=jnz0wcmk)** *(紹介リンク)* - 固定価格で信頼性の高いGPUインフラストラクチャ
+  - *直接リンク: [runpod.io](https://runpod.io)*
+
+*注：紹介リンクを使用することで、追加費用なしにVariousPlugの開発をサポートしていただけます。*
+
+### 2. インストール
 
 ```bash
 uv tool install git+https://github.com/takeru1205/variousplug.git
 ```
 
-## クイックスタート
+### 3. クイックスタート
 
-### 1. 設定の初期化
+#### 設定の初期化
 ```bash
 # プロジェクト設定を初期化
 vp --init
@@ -30,7 +43,7 @@ vp --init
 uv run vp --init
 ```
 
-### 2. APIキーの設定
+#### APIキーの設定
 ```bash
 # プラットフォームのAPIキーを設定
 vp config-set --vast-api-key YOUR_VAST_API_KEY

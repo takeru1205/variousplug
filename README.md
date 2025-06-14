@@ -2,7 +2,7 @@
 
 **[日本語版 README](README_ja.md) | [English README](README.md)**
 
-`vp` is a command-line interface (CLI) tool originally based on [fireplug](https://github.com/koheiw/fireplug), but restructured and repurposed to support [vast.ai](https://vast.ai) and [runPod](https://www.runpod.io/).
+`vp` is a command-line interface (CLI) tool originally based on [fireplug](https://github.com/koheiw/fireplug), but restructured and repurposed to support [vast.ai](https://vast.ai) and [RunPod](https://runpod.io).
 
 ## Features
 
@@ -15,15 +15,28 @@
 - 🧪 **Comprehensive Testing** - Full test suite with CI/CD
 - 🔧 **Modern Tooling** - Ruff linting, GitHub Actions, Python 3.11+
 
-## Installation
+## Getting Started
+
+### 1. Create Platform Accounts
+
+Before using VariousPlug, you'll need accounts on the platforms:
+
+- **[Sign up for vast.ai](https://cloud.vast.ai/?ref_id=85456)** *(referral link)* - Cost-effective GPU instances with spot pricing
+  - *Direct link: [vast.ai](https://vast.ai)*
+- **[Sign up for RunPod](https://runpod.io?ref=jnz0wcmk)** *(referral link)* - Reliable GPU infrastructure with fixed pricing
+  - *Direct link: [runpod.io](https://runpod.io)*
+
+*Note: Using the referral links helps support the development of VariousPlug at no extra cost to you.*
+
+### 2. Installation
 
 ```bash
 uv tool install git+https://github.com/takeru1205/variousplug.git
 ```
 
-## Quick Start
+### 3. Quick Start
 
-### 1. Initialize Configuration
+#### Initialize Configuration
 ```bash
 # Initialize project configuration
 vp --init
@@ -32,7 +45,7 @@ vp --init
 uv run vp --init
 ```
 
-### 2. Set API Keys
+#### Set API Keys
 ```bash
 # Configure your platform API keys
 vp config-set --vast-api-key YOUR_VAST_API_KEY
@@ -40,7 +53,7 @@ vp config-set --runpod-api-key YOUR_RUNPOD_API_KEY
 vp config-set --default-platform vast
 ```
 
-### 3. Run Commands on Remote Hosts
+#### Run Commands on Remote Hosts
 ```bash
 # Run Python script on remote GPU
 vp run -- python train_model.py

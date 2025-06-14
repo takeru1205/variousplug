@@ -1,0 +1,200 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint and Format Check
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Run ruff linter
+      run: |
+        uv run ruff check .
+    
+    - name: Run ruff formatter check
+      run: |
+        uv run ruff format --check .
+    
+    - name: Run mypy type checking
+      run: |
+        uv run mypy src/
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    name: Test Python ${{ matrix.python-version }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Run tests
+      run: |
+        uv run pytest tests/unit/test_interfaces.py tests/unit/test_factory.py -v --cov=variousplug --cov-report=xml --cov-report=term-missing
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: matrix.python-version == '3.11'
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  security:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Run safety check (if available)
+      run: |
+        uv add --group dev safety
+        uv run safety check
+      continue-on-error: true
+    
+    - name: Run bandit security linter
+      run: |
+        uv add --group dev bandit
+        uv run bandit -r src/ -f json -o bandit-report.json
+      continue-on-error: true
+    
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+
+  build:
+    runs-on: ubuntu-latest
+    name: Build Package
+    needs: [lint, test]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Build package
+      run: |
+        uv build
+    
+    - name: Check package installation
+      run: |
+        uv pip install dist/*.whl
+        uv run vp --help
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+  compatibility:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    name: Test ${{ matrix.os }} Python ${{ matrix.python-version }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Run basic tests
+      run: |
+        uv run pytest tests/unit/test_interfaces.py -v
+    
+    - name: Test CLI installation
+      run: |
+        uv run vp --help
+
+  integration:
+    runs-on: ubuntu-latest
+    name: Integration Tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Run integration tests (when available)
+      run: |
+        echo "Integration tests would run here with real API keys (from secrets)"
+        # uv run pytest tests/integration/ -m "requires_api_key" --tb=short
+      continue-on-error: true

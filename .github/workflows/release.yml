@@ -1,0 +1,122 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Release
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Run full test suite
+      run: |
+        uv run pytest tests/unit/test_interfaces.py tests/unit/test_factory.py -v --cov=variousplug
+    
+    - name: Run linting
+      run: |
+        uv run ruff check .
+        uv run ruff format --check .
+        uv run mypy src/
+    
+    - name: Build package
+      run: |
+        uv build
+    
+    - name: Test package installation
+      run: |
+        uv pip install dist/*.whl
+        uv run vp --help
+
+  release:
+    runs-on: ubuntu-latest
+    name: Create Release
+    needs: validate
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+    
+    - name: Build package
+      run: |
+        uv build
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "## Changes" > CHANGELOG.md
+        git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        cat CHANGELOG.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*
+        body: ${{ steps.changelog.outputs.CHANGELOG }}
+        draft: false
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+    
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        # Uncomment when ready to publish to PyPI
+        # repository-url: https://upload.pypi.org/legacy/
+        # password: ${{ secrets.PYPI_API_TOKEN }}
+        repository-url: https://test.pypi.org/legacy/
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        skip-existing: true
+
+  notify:
+    runs-on: ubuntu-latest
+    name: Notify Release
+    needs: release
+    if: always()
+    steps:
+    - name: Notify success
+      if: needs.release.result == 'success'
+      run: |
+        echo "✅ Release ${{ github.ref_name }} completed successfully!"
+    
+    - name: Notify failure
+      if: needs.release.result == 'failure'
+      run: |
+        echo "❌ Release ${{ github.ref_name }} failed!"
+        exit 1

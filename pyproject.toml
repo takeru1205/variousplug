@@ -1,0 +1,163 @@
+[project]
+name = "variousplug"
+version = "0.1.0"
+description = "A plug to various docker hosts (vast.ai and RunPod)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.0.0",
+    "pyyaml>=6.0",
+    "docker>=6.0.0",
+    "vastai-sdk>=0.1.0",
+    "runpod>=1.0.0",
+    "rich>=13.0.0",
+    "requests>=2.25.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
+    "coverage>=7.0.0",
+]
+dev = [
+    "variousplug[test]",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+
+[project.scripts]
+vp = "variousplug:main"
+variousplug = "variousplug:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--color=yes",
+    "--tb=short",
+    "--cov=variousplug",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests",
+    "requires_api_key: Tests that require real API keys",
+]
+
+[tool.coverage.run]
+source = ["src/variousplug"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "TID", # flake8-tidy-imports
+    "Q",   # flake8-quotes
+    "FLY", # flynt
+    "PERF", # perflint
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long, handled by formatter
+    "B008",   # do not perform function calls in argument defaults
+    "C901",   # too complex
+    "SIM117", # combine multiple with statements
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["variousplug"]
+force-single-line = false
+force-sort-within-sections = false
+single-line-exclusions = ["typing"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["ARG", "FBT", "PLR2004", "S101", "TID252"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.13",
+]
+test = [
+    "coverage>=7.9.1",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
+]

@@ -1,6 +1,7 @@
 """
 Unit tests for RunPod client.
 """
+
 import subprocess
 from unittest.mock import Mock, patch
 
@@ -40,21 +41,15 @@ class TestRunPodClient:
                 "imageName": "runpod/pytorch:latest",
                 "gpuCount": 1,
                 "runtime": {
-                    "ports": [
-                        {
-                            "privatePort": 22,
-                            "ip": "pod.runpod.io",
-                            "publicPort": 12345
-                        }
-                    ]
-                }
+                    "ports": [{"privatePort": 22, "ip": "pod.runpod.io", "publicPort": 12345}]
+                },
             },
             {
                 "id": "pod_456",
                 "desiredStatus": "PENDING",
                 "imageName": "runpod/tensorflow:latest",
-                "gpuCount": 1
-            }
+                "gpuCount": 1,
+            },
         ]
         mock_runpod.get_pods.return_value = mock_pods
 
@@ -92,7 +87,7 @@ class TestRunPodClient:
             "id": "pod_123",
             "desiredStatus": "RUNNING",
             "imageName": "runpod/pytorch:latest",
-            "gpuCount": 1
+            "gpuCount": 1,
         }
         mock_runpod.get_pod.return_value = mock_pod
 
@@ -132,10 +127,7 @@ class TestRunPodClient:
         mock_runpod.create_pod.return_value = {"id": "pod_new_123"}
 
         client = RunPodClient("test_api_key")
-        request = CreateInstanceRequest(
-            gpu_type="NVIDIA RTX 4090",
-            image="runpod/pytorch:latest"
-        )
+        request = CreateInstanceRequest(gpu_type="NVIDIA RTX 4090", image="runpod/pytorch:latest")
 
         instance = client.create_instance(request)
 
@@ -163,12 +155,14 @@ class TestRunPodClient:
         client = RunPodClient("test_api_key")
         request = CreateInstanceRequest()  # No parameters
 
-        instance = client.create_instance(request)
+        client.create_instance(request)
 
         # Check default values were used
         call_kwargs = mock_runpod.create_pod.call_args[1]
         assert call_kwargs["gpu_type_id"] == "NVIDIA RTX 4000 Ada Generation"  # Default
-        assert call_kwargs["image_name"] == "runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04"  # Default
+        assert (
+            call_kwargs["image_name"] == "runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04"
+        )  # Default
 
     @patch("variousplug.runpod_client.runpod")
     def test_create_instance_failure(self, mock_runpod):
@@ -216,10 +210,7 @@ class TestRunPodClient:
     @patch("variousplug.runpod_client.runpod")
     def test_execute_command_no_ssh(self, mock_runpod):
         """Test command execution without SSH (simulation mode)."""
-        mock_pod = {
-            "id": "pod_123",
-            "desiredStatus": "RUNNING"
-        }
+        mock_pod = {"id": "pod_123", "desiredStatus": "RUNNING"}
         mock_runpod.get_pod.return_value = mock_pod
 
         client = RunPodClient("test_api_key")
@@ -235,15 +226,7 @@ class TestRunPodClient:
         mock_pod = {
             "id": "pod_123",
             "desiredStatus": "RUNNING",
-            "runtime": {
-                "ports": [
-                    {
-                        "privatePort": 22,
-                        "ip": "pod.runpod.io",
-                        "publicPort": 12345
-                    }
-                ]
-            }
+            "runtime": {"ports": [{"privatePort": 22, "ip": "pod.runpod.io", "publicPort": 12345}]},
         }
         mock_runpod.get_pod.return_value = mock_pod
 
@@ -259,7 +242,7 @@ class TestRunPodClient:
 
         assert result.success is True
         assert result.output == "Python 3.10.12"
-        assert result.return_code == 0
+        assert result.exit_code == 0
 
     @patch("variousplug.runpod_client.runpod")
     def test_execute_command_instance_not_found(self, mock_runpod):
@@ -275,10 +258,7 @@ class TestRunPodClient:
     @patch("variousplug.runpod_client.runpod")
     def test_execute_command_instance_not_running(self, mock_runpod):
         """Test command execution on non-running instance."""
-        mock_pod = {
-            "id": "pod_123",
-            "desiredStatus": "STOPPED"
-        }
+        mock_pod = {"id": "pod_123", "desiredStatus": "STOPPED"}
         mock_runpod.get_pod.return_value = mock_pod
 
         client = RunPodClient("test_api_key")
@@ -296,15 +276,7 @@ class TestRunPodClient:
             "desiredStatus": "RUNNING",
             "imageName": "runpod/pytorch:latest",
             "gpuCount": 2,
-            "runtime": {
-                "ports": [
-                    {
-                        "privatePort": 22,
-                        "ip": "pod.runpod.io",
-                        "publicPort": 12345
-                    }
-                ]
-            }
+            "runtime": {"ports": [{"privatePort": 22, "ip": "pod.runpod.io", "publicPort": 12345}]},
         }
 
         instance = client._create_instance_info(raw_data)
@@ -327,7 +299,7 @@ class TestRunPodClient:
             "desiredStatus": "PENDING",
             "imageName": "runpod/tensorflow:latest",
             "vcpuCount": 4,
-            "memoryInGb": 16
+            "memoryInGb": 16,
         }
 
         instance = client._create_instance_info(raw_data)
@@ -347,13 +319,7 @@ class TestRunPodClient:
         raw_data = {
             "id": "pod_789",
             "desiredStatus": "RUNNING",
-            "ports": [
-                {
-                    "privatePort": 22,
-                    "ip": "direct.runpod.io",
-                    "publicPort": 54321
-                }
-            ]
+            "ports": [{"privatePort": 22, "ip": "direct.runpod.io", "publicPort": 54321}],
         }
 
         instance = client._create_instance_info(raw_data)
@@ -365,18 +331,11 @@ class TestRunPodClient:
     def test_is_instance_ready(self, mock_runpod):
         """Test _is_instance_ready method."""
         # Mock get_instance to return running instance
-        mock_pod = {
-            "id": "pod_123",
-            "desiredStatus": "RUNNING"
-        }
+        mock_pod = {"id": "pod_123", "desiredStatus": "RUNNING"}
         mock_runpod.get_pod.return_value = mock_pod
 
         client = RunPodClient("test_api_key")
-        instance = InstanceInfo(
-            id="pod_123",
-            platform="runpod",
-            status=InstanceStatus.PENDING
-        )
+        instance = InstanceInfo(id="pod_123", platform="runpod", status=InstanceStatus.PENDING)
 
         result = client._is_instance_ready(instance)
         assert result is True
@@ -387,11 +346,7 @@ class TestRunPodClient:
         mock_runpod.get_pod.side_effect = Exception("API Error")
 
         client = RunPodClient("test_api_key")
-        instance = InstanceInfo(
-            id="pod_123",
-            platform="runpod",
-            status=InstanceStatus.PENDING
-        )
+        instance = InstanceInfo(id="pod_123", platform="runpod", status=InstanceStatus.PENDING)
 
         result = client._is_instance_ready(instance)
         assert result is False
@@ -403,15 +358,7 @@ class TestRunPodClient:
         mock_pod = {
             "id": "pod_123",
             "desiredStatus": "RUNNING",
-            "runtime": {
-                "ports": [
-                    {
-                        "privatePort": 22,
-                        "ip": "pod.runpod.io",
-                        "publicPort": 12345
-                    }
-                ]
-            }
+            "runtime": {"ports": [{"privatePort": 22, "ip": "pod.runpod.io", "publicPort": 12345}]},
         }
         mock_runpod.get_pod.return_value = mock_pod
 
@@ -428,9 +375,7 @@ class TestRunPodClient:
         """Test _create_instance_info with minimal data."""
         client = RunPodClient("test_api_key")
 
-        raw_data = {
-            "id": "pod_minimal"
-        }
+        raw_data = {"id": "pod_minimal"}
 
         instance = client._create_instance_info(raw_data)
 

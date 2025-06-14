@@ -1,6 +1,7 @@
 """
 Core executor for VariousPlug implementing SOLID principles with dependency injection.
 """
+
 import logging
 import time
 from pathlib import Path
@@ -18,10 +19,12 @@ from .interfaces import (
 from .utils import (
     ExecutionResult,
     format_duration,
+    merge_exclude_patterns,
     print_error,
     print_info,
     print_success,
     print_warning,
+    read_vpignore_patterns,
     validate_command,
 )
 
@@ -31,19 +34,31 @@ logger = logging.getLogger(__name__)
 class WorkflowExecutor(IWorkflowExecutor):
     """Main workflow executor following SOLID principles with dependency injection."""
 
-    def __init__(self, config_manager: IConfigManager, platform_client: IPlatformClient,
-                 file_sync: IFileSync, docker_builder: IDockerBuilder):
+    def __init__(
+        self,
+        config_manager: IConfigManager,
+        platform_client: IPlatformClient,
+        file_sync: IFileSync,
+        docker_builder: IDockerBuilder,
+    ):
         """Dependency injection following Dependency Inversion Principle."""
         self.config_manager = config_manager
         self.platform_client = platform_client
         self.file_sync = file_sync
         self.docker_builder = docker_builder
 
-    def execute_workflow(self, command: list[str], platform: str,
-                        instance_id: str | None = None, sync_only: bool = False,
-                        no_sync: bool = False, dockerfile: str | None = None,
-                        working_dir: str = "/workspace") -> ExecutionResult:
-        """Execute the complete BSRS workflow."""
+    def execute_workflow(
+        self,
+        command: list[str],
+        platform: str,
+        instance_id: str | None = None,
+        sync_only: bool = False,
+        no_sync: bool = False,
+        dockerfile: str | None = None,
+        working_dir: str = "/workspace",
+        enable_docker: bool = False,
+    ) -> ExecutionResult:
+        """Execute the complete SRS workflow (Sync-Run-Sync). Docker build is optional and disabled by default."""
 
         if not validate_command(command):
             return ExecutionResult(False, error="Invalid or unsafe command")
@@ -56,11 +71,14 @@ class WorkflowExecutor(IWorkflowExecutor):
             if not target_instance and not sync_only:
                 return ExecutionResult(False, error="No instance available for execution")
 
-            print_info(f"Target: {platform} (instance: {target_instance.id if target_instance else 'auto'})")
+            print_info(
+                f"Target: {platform} (instance: {target_instance.id if target_instance else 'auto'})"
+            )
 
-            # Step 2: Build Docker image
+            # Step 2: Build Docker image (optional)
             image_tag = None
-            if not no_sync:
+            docker_config = self.config_manager.get_docker_config()
+            if not no_sync and (enable_docker or docker_config.get("enabled", False)):
                 image_tag = self._build_step(dockerfile)
                 if not image_tag:
                     return ExecutionResult(False, error="Build step failed")
@@ -110,7 +128,9 @@ class WorkflowExecutor(IWorkflowExecutor):
             return selected
 
         # Strategy 2: Find available instance
-        available_instances = [i for i in instances if i.status in [InstanceStatus.STOPPED, InstanceStatus.PENDING]]
+        available_instances = [
+            i for i in instances if i.status in [InstanceStatus.STOPPED, InstanceStatus.PENDING]
+        ]
         if available_instances:
             selected = available_instances[0]
             print_info(f"Auto-selected available instance: {selected.id}")
@@ -136,7 +156,9 @@ class WorkflowExecutor(IWorkflowExecutor):
         project_name = project_config.get("name", "unknown")
         image_tag = f"vp-{project_name}:latest"
 
-        return self.docker_builder.build_image(dockerfile_path, build_context, image_tag, build_args)
+        return self.docker_builder.build_image(
+            dockerfile_path, build_context, image_tag, build_args
+        )
 
     def _sync_step_upload(self, instance: InstanceInfo) -> bool:
         """Sync files to remote (upload)."""
@@ -144,7 +166,18 @@ class WorkflowExecutor(IWorkflowExecutor):
 
         try:
             sync_config = self.config_manager.get_sync_config()
-            exclude_patterns = sync_config.get("exclude_patterns", [])
+            config_patterns = sync_config.get("exclude_patterns", [])
+
+            # Read patterns from .vpignore file
+            vpignore_patterns = read_vpignore_patterns()
+
+            # Merge patterns from both sources
+            exclude_patterns = merge_exclude_patterns(config_patterns, vpignore_patterns)
+
+            # Log the patterns being used for debugging
+            if vpignore_patterns:
+                print_info(f"Loaded {len(vpignore_patterns)} patterns from .vpignore file")
+            print_info(f"Using {len(exclude_patterns)} total exclude patterns")
 
             local_path = "."
             remote_path = "/workspace"
@@ -160,11 +193,9 @@ class WorkflowExecutor(IWorkflowExecutor):
         print_info("📥 Sync step: Downloading files from remote...")
 
         try:
-            project_config = self.config_manager.get_project_config()
-            data_dir = project_config.get("data_dir", "data")
-
-            remote_path = f"/workspace/{data_dir}"
-            local_path = f"./{data_dir}"
+            # Download the entire workspace to capture all generated files
+            remote_path = "/workspace"
+            local_path = "."
 
             return self.file_sync.download_files(instance, remote_path, local_path)
 
@@ -172,12 +203,14 @@ class WorkflowExecutor(IWorkflowExecutor):
             print_error(f"Download sync failed: {e}")
             return False
 
-    def _run_step(self, command: list[str], instance: InstanceInfo, working_dir: str) -> ExecutionResult:
+    def _run_step(
+        self, command: list[str], instance: InstanceInfo, working_dir: str
+    ) -> ExecutionResult:
         """Run command on remote."""
         print_info(f"🚀 Run step: Executing command: {' '.join(command)}")
 
         try:
-            return self.platform_client.execute_command(instance.id, command)
+            return self.platform_client.execute_command(instance.id, command, working_dir)
         except Exception as e:
             return ExecutionResult(False, error=str(e))
 
@@ -192,15 +225,14 @@ class InstanceManager:
         """List instances."""
         return self.platform_client.list_instances()
 
-    def create_instance(self, gpu_type: str | None = None,
-                       instance_type: str | None = None,
-                       image: str | None = None) -> InstanceInfo:
+    def create_instance(
+        self,
+        gpu_type: str | None = None,
+        instance_type: str | None = None,
+        image: str | None = None,
+    ) -> InstanceInfo:
         """Create instance."""
-        request = CreateInstanceRequest(
-            gpu_type=gpu_type,
-            instance_type=instance_type,
-            image=image
-        )
+        request = CreateInstanceRequest(gpu_type=gpu_type, instance_type=instance_type, image=image)
         return self.platform_client.create_instance(request)
 
     def destroy_instance(self, instance_id: str) -> bool:

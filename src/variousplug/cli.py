@@ -1,6 +1,7 @@
 """
 Main CLI interface for VariousPlug following SOLID principles.
 """
+
 import sys
 from pathlib import Path
 
@@ -12,6 +13,39 @@ from .executor import InstanceManager, WorkflowExecutor
 from .factory import PlatformFactory
 from .interfaces import InstanceStatus
 from .utils import print_error, print_info, print_success, setup_logging
+
+
+def _auto_select_instance(config_manager: ConfigManager, platform: str) -> str | None:
+    """Auto-select the best available instance for execution."""
+    try:
+        factory = PlatformFactory()
+        platform_config = config_manager.get_platform_config(platform)
+        platform_client = factory.create_client(platform, platform_config)
+
+        instances = platform_client.list_instances()
+
+        # Priority: running instances first, then pending/starting
+        running_instances = [i for i in instances if i.status == InstanceStatus.RUNNING]
+        if running_instances:
+            selected = running_instances[0]
+            print_info(f"Auto-selected running instance: {selected.id} ({platform})")
+            return selected.id
+
+        available_instances = [
+            i for i in instances if i.status in [InstanceStatus.PENDING, InstanceStatus.STARTING]
+        ]
+        if available_instances:
+            selected = available_instances[0]
+            print_info(f"Auto-selected pending instance: {selected.id} ({platform})")
+            return selected.id
+
+        # No instances available - could auto-create one here in the future
+        print_info(f"No instances available on {platform}")
+        return None
+
+    except Exception as e:
+        print_error(f"Failed to auto-select instance: {e}")
+        return None
 
 
 class DependencyContainer:
@@ -35,54 +69,114 @@ class DependencyContainer:
         self.instance_manager = InstanceManager(self.platform_client)
 
 
-@click.group(invoke_without_command=True)
+class SmartGroup(click.Group):
+    """Custom Click group that handles both subcommands and direct execution."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # List of known subcommands
+        self.known_subcommands = {
+            "run", "list-instances", "ls", "create-instance",
+            "destroy-instance", "config-show", "config-set"
+        }
+
+    def resolve_command(self, ctx, args):
+        """Resolve command, treating unknown commands as direct execution."""
+        if not args:
+            return super().resolve_command(ctx, args)
+
+        cmd_name = args[0]
+
+        # If it's a known subcommand, handle normally
+        if cmd_name in self.known_subcommands:
+            return super().resolve_command(ctx, args)
+
+        # Otherwise, treat as direct execution - return the 'run' command
+        # Store the args in ctx for the run command to access
+        ctx.args = args  # Pass all args to the run command
+        run_cmd = self.get_command(ctx, "run")
+        return "run", run_cmd, []  # Return cmd_name, cmd, remaining_args
+
+@click.group(cls=SmartGroup, invoke_without_command=True)
 @click.option("--config", "-c", type=click.Path(), help="Path to config file")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--init", is_flag=True, help="Initialize configuration")
+@click.option("--platform", "-p", type=click.Choice(["vast", "runpod", "auto"]), default="auto", help="Target platform")
+@click.option("--instance-id", "-i", help="Specific instance ID to use")
+@click.option("--sync-only", is_flag=True, help="Only sync files, don't run command")
+@click.option("--no-sync", is_flag=True, help="Skip file synchronization")
 @click.pass_context
-def cli(ctx, config: str | None, verbose: bool, init: bool):
+def cli(ctx, config: str | None, verbose: bool, init: bool, platform: str, instance_id: str | None, sync_only: bool, no_sync: bool):  # noqa: ARG001
     """VariousPlug: Run code on remote Docker hosts (vast.ai and RunPod)."""
 
     setup_logging(verbose)
 
     ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
+    ctx.obj.update({
+        "verbose": verbose,
+        "platform": platform,
+        "instance_id": instance_id,
+        "sync_only": sync_only,
+        "no_sync": no_sync
+    })
 
     if init:
         initialize_config()
         return
 
-    # If no subcommand is provided, show help
-    if ctx.invoked_subcommand is None:
+    # If no subcommand is provided and no direct command, show help
+    if ctx.invoked_subcommand is None and not getattr(ctx, "args", None):
         click.echo(ctx.get_help())
 
 
 @cli.command()
-@click.argument("command", nargs=-1, required=True)
-@click.option("--platform", "-p", type=click.Choice(["vast", "runpod", "auto"]),
-              default="auto", help="Target platform")
-@click.option("--instance-id", "-i", help="Specific instance ID to use")
-@click.option("--sync-only", is_flag=True, help="Only sync files, don't run command")
-@click.option("--no-sync", is_flag=True, help="Skip file synchronization")
+@click.argument("command", nargs=-1, required=False)
 @click.option("--dockerfile", "-d", help="Custom Dockerfile path")
 @click.option("--working-dir", "-w", help="Working directory in container", default="/workspace")
+@click.option("--enable-docker", is_flag=True, help="Enable Docker build step (disabled by default)")
 @click.pass_context
-def run(ctx, command: tuple, platform: str, instance_id: str | None,
-        sync_only: bool, no_sync: bool, dockerfile: str | None, working_dir: str):
+def run(
+    ctx,
+    command: tuple,
+    dockerfile: str | None,
+    working_dir: str,
+    enable_docker: bool,
+):
     """Run a command on remote Docker host."""
 
     try:
+        # Get options from context (set by main CLI or by direct options)
+        platform = ctx.obj.get("platform", "auto")
+        instance_id = ctx.obj.get("instance_id")
+        sync_only = ctx.obj.get("sync_only", False)
+        no_sync = ctx.obj.get("no_sync", False)
+
+        # Handle smart routing - use ctx.args if command is empty (direct execution)
+        if not command and hasattr(ctx, "args") and ctx.args:
+            cmd_list = list(ctx.args)
+        elif not command and hasattr(ctx.parent, "args") and ctx.parent.args:
+            cmd_list = list(ctx.parent.args)
+        else:
+            cmd_list = list(command) if command else []
+
+        if not cmd_list:
+            click.echo("Error: No command specified")
+            sys.exit(1)
+
         config_manager = ConfigManager.load()
 
         # Resolve platform
         if platform == "auto":
             platform = config_manager.get_default_platform()
 
+        # Auto-select instance if not specified
+        if not instance_id:
+            instance_id = _auto_select_instance(config_manager, platform)
+
         # Create dependency container
         container = DependencyContainer(config_manager, platform)
 
         # Execute workflow
-        cmd_list = list(command)
         result = container.workflow_executor.execute_workflow(
             command=cmd_list,
             platform=platform,
@@ -90,7 +184,8 @@ def run(ctx, command: tuple, platform: str, instance_id: str | None,
             sync_only=sync_only,
             no_sync=no_sync,
             dockerfile=dockerfile,
-            working_dir=working_dir
+            working_dir=working_dir,
+            enable_docker=enable_docker,
         )
 
         if result.success:
@@ -107,8 +202,12 @@ def run(ctx, command: tuple, platform: str, instance_id: str | None,
 
 
 @cli.command()
-@click.option("--platform", "-p", type=click.Choice(["vast", "runpod"]),
-              help="Platform to list instances for (if not specified, shows all platforms)")
+@click.option(
+    "--platform",
+    "-p",
+    type=click.Choice(["vast", "runpod"]),
+    help="Platform to list instances for (if not specified, shows all platforms)",
+)
 def list_instances(platform: str | None):
     """List available instances."""
     try:
@@ -168,8 +267,12 @@ def list_instances(platform: str | None):
 
 # Add alias for list-instances
 @cli.command(name="ls")
-@click.option("--platform", "-p", type=click.Choice(["vast", "runpod"]),
-              help="Platform to list instances for (if not specified, shows all platforms)")
+@click.option(
+    "--platform",
+    "-p",
+    type=click.Choice(["vast", "runpod"]),
+    help="Platform to list instances for (if not specified, shows all platforms)",
+)
 def ls(platform: str | None):
     """List available instances (alias for list-instances)."""
     # Just call the main list_instances function
@@ -182,17 +285,16 @@ def ls(platform: str | None):
 @click.option("--gpu-type", help="GPU type to request")
 @click.option("--instance-type", help="Instance type/size")
 @click.option("--image", help="Docker image to use")
-def create_instance(platform: str, gpu_type: str | None,
-                   instance_type: str | None, image: str | None):
+def create_instance(
+    platform: str, gpu_type: str | None, instance_type: str | None, image: str | None
+):
     """Create a new instance on the specified platform."""
     try:
         config_manager = ConfigManager.load()
         container = DependencyContainer(config_manager, platform)
 
         instance = container.instance_manager.create_instance(
-            gpu_type=gpu_type,
-            instance_type=instance_type,
-            image=image
+            gpu_type=gpu_type, instance_type=instance_type, image=image
         )
 
         print_success(f"Instance created successfully: {instance.id}")
@@ -206,8 +308,9 @@ def create_instance(platform: str, gpu_type: str | None,
 
 @cli.command()
 @click.argument("instance_id")
-@click.option("--platform", "-p", type=click.Choice(["vast", "runpod"]),
-              help="Platform of the instance")
+@click.option(
+    "--platform", "-p", type=click.Choice(["vast", "runpod"]), help="Platform of the instance"
+)
 def destroy_instance(instance_id: str, platform: str | None):
     """Destroy an instance."""
     try:
@@ -240,24 +343,22 @@ def config_show():
 @cli.command()
 @click.option("--vast-api-key", help="Vast.ai API key")
 @click.option("--runpod-api-key", help="RunPod API key")
-@click.option("--default-platform", type=click.Choice(["vast", "runpod"]),
-              help="Default platform to use")
-def config_set(vast_api_key: str | None, runpod_api_key: str | None,
-               default_platform: str | None):
+@click.option(
+    "--default-platform", type=click.Choice(["vast", "runpod"]), help="Default platform to use"
+)
+def config_set(vast_api_key: str | None, runpod_api_key: str | None, default_platform: str | None):
     """Set configuration values."""
     try:
         config_manager = ConfigManager.load()
 
         if vast_api_key:
-            config_manager.update_platform_config("vast", {
-                "api_key": vast_api_key,
-                "enabled": True
-            })
+            config_manager.update_platform_config(
+                "vast", {"api_key": vast_api_key, "enabled": True}
+            )
         if runpod_api_key:
-            config_manager.update_platform_config("runpod", {
-                "api_key": runpod_api_key,
-                "enabled": True
-            })
+            config_manager.update_platform_config(
+                "runpod", {"api_key": runpod_api_key, "enabled": True}
+            )
         if default_platform:
             config_manager.set_default_platform(default_platform)
 
@@ -274,26 +375,26 @@ def initialize_config():
     print_info("Initializing VariousPlug configuration...")
 
     # Get project name
-    project_name = click.prompt("Enter your project name",
-                               default=Path.cwd().name)
+    project_name = click.prompt("Enter your project name", default=Path.cwd().name)
 
     # Get API keys
-    vast_api_key = click.prompt("Enter your Vast.ai API key (optional)",
-                               default="", show_default=False)
-    runpod_api_key = click.prompt("Enter your RunPod API key (optional)",
-                                 default="", show_default=False)
+    vast_api_key = click.prompt(
+        "Enter your Vast.ai API key (optional)", default="", show_default=False
+    )
+    runpod_api_key = click.prompt(
+        "Enter your RunPod API key (optional)", default="", show_default=False
+    )
 
     # Get default platform
-    default_platform = click.prompt("Default platform",
-                                   type=click.Choice(["vast", "runpod"]),
-                                   default="vast")
+    default_platform = click.prompt(
+        "Default platform", type=click.Choice(["vast", "runpod"]), default="vast"
+    )
 
     # Get data directory
     data_dir = click.prompt("Data directory", default="data")
 
     # Get base Docker image
-    base_image = click.prompt("Base Docker image",
-                             default="python:3.11-slim")
+    base_image = click.prompt("Base Docker image", default="python:3.11-slim")
 
     try:
         config_manager = ConfigManager.create_new(
@@ -302,7 +403,7 @@ def initialize_config():
             runpod_api_key=runpod_api_key or None,
             default_platform=default_platform,
             data_dir=data_dir,
-            base_image=base_image
+            base_image=base_image,
         )
 
         config_manager.save()

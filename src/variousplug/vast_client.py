@@ -1,6 +1,7 @@
 """
 Vast.ai client integration for VariousPlug following SOLID principles.
 """
+
 import logging
 from typing import Any
 
@@ -101,7 +102,7 @@ class VastClient(BasePlatformClient):
                     id=str(instance_id),
                     platform=self.platform_name,
                     status=InstanceStatus.PENDING,
-                    raw_data=result
+                    raw_data=result,
                 )
             else:
                 raise Exception(f"Unexpected response from Vast.ai: {result}")
@@ -129,23 +130,27 @@ class VastClient(BasePlatformClient):
 
             for i, method in enumerate(methods_to_try):
                 try:
-                    print_info(f"Trying destroy method {i+1}...")
-                    result = method()
+                    print_info(f"Trying destroy method {i + 1}...")
+                    method()
                     print_info(f"Instance {instance_id} destruction initiated successfully")
                     return True
                 except Exception as method_error:
-                    print_warning(f"Method {i+1} failed: {str(method_error)[:100]}")
+                    print_warning(f"Method {i + 1} failed: {str(method_error)[:100]}")
                     continue
 
             # All methods failed
             print_warning(f"Could not destroy instance {instance_id} via API")
-            print_warning("Please manually destroy the instance in vast.ai console to avoid charges")
+            print_warning(
+                "Please manually destroy the instance in vast.ai console to avoid charges"
+            )
             print_warning("URL: https://cloud.vast.ai/instances/")
             return False
 
         except Exception as e:
             print_warning(f"Destroy operation failed: {e}")
-            print_warning("Please manually destroy the instance in vast.ai console to avoid charges")
+            print_warning(
+                "Please manually destroy the instance in vast.ai console to avoid charges"
+            )
             return False
 
     def _try_direct_api_destroy(self, instance_id: str):
@@ -157,10 +162,7 @@ class VastClient(BasePlatformClient):
             api_key = self.api_key
             url = f"https://console.vast.ai/api/v0/instances/{instance_id}/"
 
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
             # Try DELETE request
             response = requests.delete(url, headers=headers, timeout=30)
@@ -171,9 +173,9 @@ class VastClient(BasePlatformClient):
                 raise Exception(f"HTTP {response.status_code}: {response.text}")
 
         except Exception as e:
-            raise Exception(f"Direct API call failed: {e}")
+            raise Exception(f"Direct API call failed: {e}") from e
 
-    def execute_command(self, instance_id: str, command: list[str]) -> ExecutionResult:
+    def execute_command(self, instance_id: str, command: list[str], working_dir: str = "/workspace") -> ExecutionResult:
         """Execute a command on an instance."""
         try:
             # Get instance details for validation
@@ -187,33 +189,45 @@ class VastClient(BasePlatformClient):
             # Check if SSH is available
             if not instance.ssh_host or not instance.ssh_port:
                 cmd_str = " ".join(command)
-                print_warning(f"SSH not available for instance {instance_id}, simulating: {cmd_str}")
+                print_warning(
+                    f"SSH not available for instance {instance_id}, simulating: {cmd_str}"
+                )
 
                 # Simple simulation for common commands
                 if "python --version" in cmd_str:
                     return ExecutionResult(True, "Python 3.8.10")
                 elif "echo" in cmd_str:
-                    echo_text = cmd_str.split("echo", 1)[1].strip().strip('"\'')
+                    echo_text = cmd_str.split("echo", 1)[1].strip().strip("\"'")
                     return ExecutionResult(True, echo_text)
                 elif "test_script.py" in cmd_str:
-                    return ExecutionResult(True, "VariousPlug Test Script\nTest completed successfully!")
+                    return ExecutionResult(
+                        True, "VariousPlug Test Script\nTest completed successfully!"
+                    )
                 else:
                     return ExecutionResult(True, f"Simulated execution: {cmd_str}")
 
             # Try SSH execution first
             try:
                 import subprocess
+
                 cmd_str = " ".join(command)
+                # Prepend cd command to ensure we're in the right working directory
+                full_cmd = f"cd {working_dir} && {cmd_str}"
 
                 ssh_cmd = [
                     "ssh",
-                    "-p", str(instance.ssh_port),
-                    "-o", "StrictHostKeyChecking=no",
-                    "-o", "UserKnownHostsFile=/dev/null",
-                    "-o", "LogLevel=ERROR",
-                    "-o", "ConnectTimeout=10",
+                    "-p",
+                    str(instance.ssh_port),
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    "UserKnownHostsFile=/dev/null",
+                    "-o",
+                    "LogLevel=ERROR",
+                    "-o",
+                    "ConnectTimeout=10",
                     f"{instance.ssh_username}@{instance.ssh_host}",
-                    cmd_str
+                    full_cmd,
                 ]
 
                 result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=30)
@@ -223,8 +237,14 @@ class VastClient(BasePlatformClient):
                 else:
                     # SSH failed, fallback to simulation
                     print_warning(f"SSH failed for instance {instance_id}, using simulation")
+                    print_info(f"SSH Command: {' '.join(ssh_cmd)}")
+                    print_info(f"SSH Return Code: {result.returncode}")
+                    print_info(f"SSH Stdout: {result.stdout}")
+                    print_info(f"SSH Stderr: {result.stderr}")
                     if "test_script.py" in cmd_str:
-                        return ExecutionResult(True, "VariousPlug Test Script\nTest completed successfully!")
+                        return ExecutionResult(
+                            True, "VariousPlug Test Script\nTest completed successfully!"
+                        )
                     else:
                         return ExecutionResult(True, f"Simulated execution: {cmd_str}")
 
@@ -254,7 +274,9 @@ class VastClient(BasePlatformClient):
                     # Final fallback to simulation
                     print_warning(f"SDK execution failed, using simulation for: {cmd_str}")
                     if "test_script.py" in cmd_str:
-                        return ExecutionResult(True, "VariousPlug Test Script\nTest completed successfully!")
+                        return ExecutionResult(
+                            True, "VariousPlug Test Script\nTest completed successfully!"
+                        )
                     else:
                         return ExecutionResult(True, f"Simulated execution: {cmd_str}")
 
@@ -277,5 +299,5 @@ class VastClient(BasePlatformClient):
             ssh_host=raw_data.get("ssh_host"),
             ssh_port=raw_data.get("ssh_port"),
             ssh_username="root",  # Vast.ai default
-            raw_data=raw_data
+            raw_data=raw_data,
         )

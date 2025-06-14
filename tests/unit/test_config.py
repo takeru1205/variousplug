@@ -1,6 +1,7 @@
 """
 Unit tests for VariousPlug configuration management.
 """
+
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -37,7 +38,7 @@ class TestConfigManager:
             yaml.dump(sample_config, f)
 
         manager = ConfigManager(config_file)
-        loaded_config = manager.load()
+        loaded_config = manager.load_from_file()
 
         assert loaded_config == sample_config
         assert manager.config == sample_config
@@ -48,7 +49,7 @@ class TestConfigManager:
         manager = ConfigManager(config_file)
 
         with pytest.raises(FileNotFoundError):
-            manager.load()
+            manager.load_from_file()
 
     def test_save_config(self, temp_dir, sample_config):
         """Test saving configuration."""
@@ -84,10 +85,7 @@ class TestConfigManager:
         """Test getting existing platform configuration."""
         vast_config = config_manager.get_platform_config("vast")
 
-        assert vast_config == {
-            "api_key": "test_vast_key",
-            "enabled": True
-        }
+        assert vast_config == {"api_key": "test_vast_key", "enabled": True}
 
     def test_get_platform_config_nonexistent(self, config_manager):
         """Test getting non-existent platform configuration."""
@@ -97,11 +95,7 @@ class TestConfigManager:
 
     def test_update_platform_config_existing(self, config_manager):
         """Test updating existing platform configuration."""
-        new_config = {
-            "api_key": "new_vast_key",
-            "enabled": False,
-            "region": "us-east"
-        }
+        new_config = {"api_key": "new_vast_key", "enabled": False, "region": "us-east"}
 
         config_manager.update_platform_config("vast", new_config)
 
@@ -110,10 +104,7 @@ class TestConfigManager:
 
     def test_update_platform_config_new(self, config_manager):
         """Test updating configuration for new platform."""
-        new_config = {
-            "api_key": "aws_key",
-            "enabled": True
-        }
+        new_config = {"api_key": "aws_key", "enabled": True}
 
         config_manager.update_platform_config("aws", new_config)
 
@@ -157,9 +148,7 @@ class TestConfigManager:
         manager = ConfigManager(config_file)
 
         default_config = manager.create_default_config(
-            project_name="test-project",
-            data_dir="data",
-            base_image="python:3.11-slim"
+            project_name="test-project", data_dir="data", base_image="python:3.11-slim"
         )
 
         expected_config = {
@@ -167,31 +156,26 @@ class TestConfigManager:
                 "name": "test-project",
                 "data_dir": "data",
                 "base_image": "python:3.11-slim",
-                "working_dir": "/workspace"
+                "working_dir": "/workspace",
             },
             "platforms": {
                 "default": "vast",
-                "vast": {
-                    "api_key": None,
-                    "enabled": False
-                },
-                "runpod": {
-                    "api_key": None,
-                    "enabled": False
-                }
+                "vast": {"api_key": None, "enabled": False},
+                "runpod": {"api_key": None, "enabled": False},
             },
-            "docker": {
-                "build_context": ".",
-                "dockerfile": "Dockerfile",
-                "build_args": {}
-            },
+            "docker": {"build_context": ".", "dockerfile": "Dockerfile", "build_args": {}},
             "sync": {
                 "exclude_patterns": [
-                    ".git/", ".vp/", "__pycache__/", "*.pyc",
-                    ".DS_Store", "node_modules/", ".env"
+                    ".git/",
+                    ".vp/",
+                    "__pycache__/",
+                    "*.pyc",
+                    ".DS_Store",
+                    "node_modules/",
+                    ".env",
                 ],
-                "include_patterns": ["*"]
-            }
+                "include_patterns": ["*"],
+            },
         }
 
         assert default_config == expected_config
@@ -227,7 +211,7 @@ class TestConfigManager:
             "name": "test-project",
             "data_dir": "data",
             "base_image": "python:3.11-slim",
-            "working_dir": "/workspace"
+            "working_dir": "/workspace",
         }
 
         assert project_config == expected
@@ -236,11 +220,7 @@ class TestConfigManager:
         """Test getting Docker configuration."""
         docker_config = config_manager.get_docker_config()
 
-        expected = {
-            "build_context": ".",
-            "dockerfile": "Dockerfile",
-            "build_args": {}
-        }
+        expected = {"build_context": ".", "dockerfile": "Dockerfile", "build_args": {}}
 
         assert docker_config == expected
 
@@ -248,10 +228,7 @@ class TestConfigManager:
         """Test getting sync configuration."""
         sync_config = config_manager.get_sync_config()
 
-        expected = {
-            "exclude_patterns": [".git/", ".vp/", "*.pyc"],
-            "include_patterns": ["*"]
-        }
+        expected = {"exclude_patterns": [".git/", ".vp/", "*.pyc"], "include_patterns": ["*"]}
 
         assert sync_config == expected
 
@@ -266,7 +243,7 @@ class TestConfigManager:
         manager = ConfigManager(config_file)
 
         with pytest.raises(yaml.YAMLError):
-            manager.load()
+            manager.load_from_file()
 
     def test_save_file_permissions_error(self, temp_dir, sample_config):
         """Test save with file permissions error."""
@@ -310,14 +287,11 @@ class TestConfigManager:
         config_file = temp_dir / "config.yaml"
         manager = ConfigManager(config_file)
 
-        base_config = {
-            "project": {"name": "base"},
-            "platforms": {"vast": {"enabled": True}}
-        }
+        base_config = {"project": {"name": "base"}, "platforms": {"vast": {"enabled": True}}}
 
         override_config = {
             "project": {"version": "1.0"},
-            "platforms": {"vast": {"api_key": "new_key"}}
+            "platforms": {"vast": {"api_key": "new_key"}},
         }
 
         # For now, just test that we can handle nested dictionaries

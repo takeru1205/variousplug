@@ -1,6 +1,7 @@
 """
 Utility functions for VariousPlug.
 """
+
 import fnmatch
 import logging
 from pathlib import Path
@@ -9,6 +10,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 console = Console()
+error_console = Console(stderr=True)
 
 
 def setup_logging(verbose: bool = False):
@@ -19,7 +21,7 @@ def setup_logging(verbose: bool = False):
         level=level,
         format="%(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler(console=console, show_path=False)]
+        handlers=[RichHandler(console=console, show_path=False)],
     )
 
 
@@ -30,12 +32,12 @@ def print_success(message: str):
 
 def print_error(message: str):
     """Print an error message."""
-    console.print(f"❌ {message}", style="red")
+    error_console.print(f"❌ {message}", style="red")
 
 
 def print_info(message: str):
     """Print an info message."""
-    console.print(f"ℹ️  {message}", style="blue")
+    console.print(f"[info]i[/info]  {message}", style="blue")
 
 
 def print_warning(message: str):
@@ -46,16 +48,41 @@ def print_warning(message: str):
 class ExecutionResult:
     """Result of command execution."""
 
-    def __init__(self, success: bool, output: str | None = None,
-                 error: str | None = None, exit_code: int = 0):
+    def __init__(
+        self, success: bool, output: str | None = "", error: str | None = "", exit_code: int = 0
+    ):
         self.success = success
         self.output = output
         self.error = error
         self.exit_code = exit_code
 
+    def __bool__(self) -> bool:
+        """Return success status as boolean."""
+        return self.success
 
-def should_exclude_file(file_path: Path, exclude_patterns: list[str],
-                       include_patterns: list[str]) -> bool:
+    def __str__(self) -> str:
+        """String representation."""
+        return f"ExecutionResult(success={self.success}, output='{self.output}', error='{self.error}', exit_code={self.exit_code})"
+
+    def __repr__(self) -> str:
+        """Repr representation."""
+        return f"ExecutionResult(success={self.success}, output='{self.output}', error='{self.error}', exit_code={self.exit_code})"
+
+    def __eq__(self, other) -> bool:
+        """Equality comparison."""
+        if not isinstance(other, ExecutionResult):
+            return False
+        return (
+            self.success == other.success
+            and self.output == other.output
+            and self.error == other.error
+            and self.exit_code == other.exit_code
+        )
+
+
+def should_exclude_file(
+    file_path: Path, exclude_patterns: list[str], include_patterns: list[str]
+) -> bool:
     """Check if a file should be excluded from sync."""
     file_str = str(file_path)
 
@@ -80,8 +107,9 @@ def should_exclude_file(file_path: Path, exclude_patterns: list[str],
     return False
 
 
-def get_sync_files(base_path: Path, exclude_patterns: list[str],
-                  include_patterns: list[str]) -> list[Path]:
+def get_sync_files(
+    base_path: Path, exclude_patterns: list[str], include_patterns: list[str]
+) -> list[Path]:
     """Get list of files to sync."""
     files = []
 
@@ -101,10 +129,7 @@ def validate_command(command: list[str]) -> bool:
 
     # Basic safety check - don't allow certain dangerous commands
     dangerous_commands = ["rm", "rmdir", "del", "format", "fdisk"]
-    if command[0].lower() in dangerous_commands:
-        return False
-
-    return True
+    return command[0].lower() not in dangerous_commands
 
 
 def format_duration(seconds: float) -> str:
@@ -119,3 +144,32 @@ def format_duration(seconds: float) -> str:
         return f"{hours:.1f}h"
 
 
+def read_vpignore_patterns(base_path: Path | None = None) -> list[str]:
+    """Read exclude patterns from .vpignore file."""
+    if base_path is None:
+        base_path = Path.cwd()
+
+    vpignore_path = base_path / ".vpignore"
+    patterns = []
+
+    if vpignore_path.exists():
+        try:
+            with open(vpignore_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if line and not line.startswith("#"):
+                        patterns.append(line)
+        except Exception as e:
+            # Log error but don't fail the sync
+            print_warning(f"Failed to read .vpignore file: {e}")
+
+    return patterns
+
+
+def merge_exclude_patterns(config_patterns: list[str], vpignore_patterns: list[str]) -> list[str]:
+    """Merge exclude patterns from config and .vpignore file, removing duplicates."""
+    # Use a set to avoid duplicates, then convert back to list
+    all_patterns = set(config_patterns)
+    all_patterns.update(vpignore_patterns)
+    return list(all_patterns)

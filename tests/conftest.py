@@ -1,6 +1,7 @@
 """
 Pytest configuration and fixtures for VariousPlug tests.
 """
+
 import shutil
 import tempfile
 from pathlib import Path
@@ -36,28 +37,15 @@ def sample_config():
             "name": "test-project",
             "data_dir": "data",
             "base_image": "python:3.11-slim",
-            "working_dir": "/workspace"
+            "working_dir": "/workspace",
         },
         "platforms": {
             "default": "vast",
-            "vast": {
-                "api_key": "test_vast_key",
-                "enabled": True
-            },
-            "runpod": {
-                "api_key": "test_runpod_key",
-                "enabled": True
-            }
+            "vast": {"api_key": "test_vast_key", "enabled": True},
+            "runpod": {"api_key": "test_runpod_key", "enabled": True},
         },
-        "docker": {
-            "build_context": ".",
-            "dockerfile": "Dockerfile",
-            "build_args": {}
-        },
-        "sync": {
-            "exclude_patterns": [".git/", ".vp/", "*.pyc"],
-            "include_patterns": ["*"]
-        }
+        "docker": {"build_context": ".", "dockerfile": "Dockerfile", "build_args": {}},
+        "sync": {"exclude_patterns": [".git/", ".vp/", "*.pyc"], "include_patterns": ["*"]},
     }
 
 
@@ -86,7 +74,7 @@ def mock_instance_running():
         ssh_host="test.vast.ai",
         ssh_port=22,
         ssh_username="root",
-        raw_data={"id": "test_instance_123", "status": "running"}
+        raw_data={"id": "test_instance_123", "status": "running"},
     )
 
 
@@ -99,7 +87,7 @@ def mock_instance_pending():
         status=InstanceStatus.PENDING,
         gpu_type="RTX_4090",
         image="runpod/pytorch:latest",
-        raw_data={"id": "test_instance_456", "status": "pending"}
+        raw_data={"id": "test_instance_456", "status": "pending"},
     )
 
 
@@ -107,10 +95,7 @@ def mock_instance_pending():
 def sample_create_request():
     """Sample create instance request."""
     return CreateInstanceRequest(
-        gpu_type="GTX_1080",
-        image="pytorch/pytorch",
-        instance_type="gpu",
-        additional_params={}
+        gpu_type="GTX_1080", image="pytorch/pytorch", instance_type="gpu", additional_params={}
     )
 
 
@@ -169,6 +154,7 @@ def mock_environment(monkeypatch, temp_dir):
 def cli_runner():
     """Click CLI test runner."""
     from click.testing import CliRunner
+
     return CliRunner()
 
 
@@ -195,7 +181,7 @@ class MockPlatformClient:
             status=InstanceStatus.PENDING,
             gpu_type=request.gpu_type,
             image=request.image,
-            raw_data={"mock": True}
+            raw_data={"mock": True},
         )
         self.instances.append(instance)
         return instance

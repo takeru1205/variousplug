@@ -1,6 +1,7 @@
 """
 Factory classes implementing the Abstract Factory pattern for platform creation.
 """
+
 from typing import Any
 
 from .base import RsyncFileSync, VastFileSync
@@ -15,12 +16,12 @@ class PlatformFactory(IPlatformFactory):
     def __init__(self):
         self._platform_creators = {
             "vast": self._create_vast_client,
-            "runpod": self._create_runpod_client
+            "runpod": self._create_runpod_client,
         }
 
         self._file_sync_creators = {
             "vast": self._create_vast_file_sync,
-            "runpod": lambda config: RsyncFileSync()  # RunPod pods now support SSH
+            "runpod": lambda _config: RsyncFileSync(),  # RunPod pods now support SSH
         }
 
     def create_client(self, platform: str, config: dict[str, Any]) -> IPlatformClient:
@@ -34,7 +35,7 @@ class PlatformFactory(IPlatformFactory):
 
         return self._platform_creators[platform](api_key)
 
-    def create_file_sync(self, platform: str, config: dict[str, Any] = None) -> IFileSync:
+    def create_file_sync(self, platform: str, config: dict[str, Any] | None = None) -> IFileSync:
         """Create file sync client for platform."""
         if platform not in self._file_sync_creators:
             raise ValueError(f"Unsupported platform: {platform}")
@@ -58,9 +59,9 @@ class PlatformFactory(IPlatformFactory):
         """Create RunPod client."""
         return RunPodClient(api_key)
 
-    def _create_vast_file_sync(self, config: dict[str, Any] = None) -> IFileSync:
+    def _create_vast_file_sync(self, config: dict[str, Any] | None = None) -> IFileSync:
         """Create Vast.ai file sync client."""
         if not config or not config.get("api_key"):
             raise ValueError("API key required for Vast.ai file sync")
-        
+
         return VastFileSync(config["api_key"])

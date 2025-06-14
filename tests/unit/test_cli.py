@@ -1,7 +1,7 @@
 """
 Unit tests for VariousPlug CLI commands.
 """
-from pathlib import Path
+
 from unittest.mock import Mock, patch
 
 import pytest
@@ -40,10 +40,7 @@ class TestCLI:
         mock_instance_manager = Mock()
         mock_instances = [
             InstanceInfo(
-                id="test_123",
-                platform="vast",
-                status=InstanceStatus.RUNNING,
-                gpu_type="GTX_1080"
+                id="test_123", platform="vast", status=InstanceStatus.RUNNING, gpu_type="GTX_1080"
             )
         ]
         mock_instance_manager.list_instances.return_value = mock_instances
@@ -75,7 +72,7 @@ class TestCLI:
                 id="runpod_456",
                 platform="runpod",
                 status=InstanceStatus.PENDING,
-                gpu_type="RTX_4090"
+                gpu_type="RTX_4090",
             )
         ]
         mock_instance_manager.list_instances.return_value = mock_instances
@@ -132,22 +129,25 @@ class TestCLI:
         mock_container = Mock()
         mock_instance_manager = Mock()
         mock_instance = InstanceInfo(
-            id="new_123",
-            platform="vast",
-            status=InstanceStatus.PENDING,
-            gpu_type="GTX_1080"
+            id="new_123", platform="vast", status=InstanceStatus.PENDING, gpu_type="GTX_1080"
         )
         mock_instance_manager.create_instance.return_value = mock_instance
         mock_container.instance_manager = mock_instance_manager
         mock_container_class.return_value = mock_container
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "create-instance",
-            "--platform", "vast",
-            "--gpu-type", "GTX_1080",
-            "--image", "pytorch/pytorch"
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "create-instance",
+                "--platform",
+                "vast",
+                "--gpu-type",
+                "GTX_1080",
+                "--image",
+                "pytorch/pytorch",
+            ],
+        )
 
         assert result.exit_code == 0
         assert "new_123" in result.output
@@ -169,38 +169,37 @@ class TestCLI:
         mock_container_class.return_value = mock_container
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "destroy-instance",
-            "test_123",
-            "--platform", "vast"
-        ])
+        result = runner.invoke(cli, ["destroy-instance", "test_123", "--platform", "vast"])
 
         assert result.exit_code == 0
         assert "destroyed successfully" in result.output
 
     @patch("variousplug.cli.ConfigManager.load")
     @patch("variousplug.cli.DependencyContainer")
-    def test_run_command(self, mock_container_class, mock_config_load):
+    @patch("variousplug.cli._auto_select_instance")
+    def test_run_command(self, mock_auto_select, mock_container_class, mock_config_load):
         """Test run command."""
         # Mock configuration
         mock_config = Mock()
         mock_config.get_default_platform.return_value = "vast"
         mock_config_load.return_value = mock_config
 
+        # Mock auto-selection
+        mock_auto_select.return_value = "test-instance-123"
+
         # Mock container
         mock_container = Mock()
         mock_workflow_executor = Mock()
-        mock_workflow_executor.execute_workflow.return_value = True
+        from variousplug.utils import ExecutionResult
+
+        mock_workflow_executor.execute_workflow.return_value = ExecutionResult(
+            True, "Command executed"
+        )
         mock_container.workflow_executor = mock_workflow_executor
         mock_container_class.return_value = mock_container
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "run",
-            "--",
-            "python",
-            "--version"
-        ])
+        result = runner.invoke(cli, ["run", "--", "python", "--version"])
 
         assert result.exit_code == 0
 
@@ -209,13 +208,13 @@ class TestCLI:
         """Test config-show command."""
         # Mock config manager
         mock_config = Mock()
-        mock_config.config = {
-            "project": {"name": "test-project"},
-            "platforms": {
-                "default": "vast",
-                "vast": {"api_key": "test_key", "enabled": True}
-            }
+        mock_config.get_project_config.return_value = {
+            "name": "test-project",
+            "data_dir": "data",
+            "base_image": "python:3.11",
         }
+        mock_config.get_default_platform.return_value = "vast"
+        mock_config.get_platform_config.return_value = {"api_key": "test_key", "enabled": True}
         mock_config_manager_class.load.return_value = mock_config
 
         runner = CliRunner()
@@ -233,11 +232,9 @@ class TestCLI:
         mock_config_manager_class.load.return_value = mock_config
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "config-set",
-            "--vast-api-key", "new_vast_key",
-            "--default-platform", "runpod"
-        ])
+        result = runner.invoke(
+            cli, ["config-set", "--vast-api-key", "new_vast_key", "--default-platform", "runpod"]
+        )
 
         assert result.exit_code == 0
         assert "Configuration updated successfully" in result.output
@@ -258,10 +255,11 @@ class TestCLI:
 
     def test_init_command_interactive(self):
         """Test initialize_config function."""
-        with patch("click.prompt") as mock_prompt, \
-             patch("variousplug.cli.ConfigManager") as mock_config_class, \
-             patch("pathlib.Path.cwd") as mock_cwd:
-
+        with (
+            patch("click.prompt") as mock_prompt,
+            patch("variousplug.cli.ConfigManager") as mock_config_class,
+            patch("variousplug.cli.ConfigFileGenerator") as mock_file_gen,
+        ):
             # Mock user inputs
             mock_prompt.side_effect = [
                 "test-project",  # project name
@@ -269,14 +267,14 @@ class TestCLI:
                 "test_runpod_key",  # runpod api key
                 "vast",  # default platform
                 "data",  # data directory
-                "python:3.11-slim"  # base image
+                "python:3.11-slim",  # base image
             ]
-
-            mock_cwd.return_value = Path("/tmp/test")
 
             # Mock config manager
             mock_config = Mock()
-            mock_config_class.return_value = mock_config
+            mock_config.get_project_config.return_value = {"base_image": "python:3.11-slim"}
+            mock_config.get_sync_config.return_value = {"exclude_patterns": [".git/", ".vp/"]}
+            mock_config_class.create_new.return_value = mock_config
 
             from variousplug.cli import initialize_config
 
@@ -285,8 +283,10 @@ class TestCLI:
                 initialize_config()
 
             # Verify config was created and saved
-            mock_config.create_default_config.assert_called()
-            mock_config.save.assert_called()
+            mock_config_class.create_new.assert_called_once()
+            mock_config.save.assert_called_once()
+            mock_file_gen.create_dockerfile.assert_called_once()
+            mock_file_gen.create_vpignore.assert_called_once()
 
 
 class TestDependencyContainer:
@@ -324,14 +324,14 @@ class TestDependencyContainer:
             "project": {"name": "test"},
             "platforms": {
                 "vast": {"enabled": True}  # No API key
-            }
+            },
         }
 
         with open(config_file, "w") as f:
             yaml.dump(config_data, f)
 
         config_manager = ConfigManager(config_file)
-        config_manager.load()
+        config_manager.load_from_file()
 
         with pytest.raises(ValueError, match="API key not configured"):
             DependencyContainer(config_manager, "vast")
@@ -359,7 +359,7 @@ class TestCLIErrorHandling:
         mock_container_class.side_effect = ValueError("Invalid platform")
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["list-instances"])
+        result = runner.invoke(cli, ["list-instances", "--platform", "vast"])
 
         assert result.exit_code == 1
         assert "Invalid platform" in result.output
@@ -376,7 +376,7 @@ class TestCLIErrorHandling:
         mock_container_class.return_value = mock_container
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["list-instances"])
+        result = runner.invoke(cli, ["list-instances", "--platform", "vast"])
 
         assert result.exit_code == 1
         assert "Failed to list instances" in result.output
@@ -389,10 +389,7 @@ class TestCLIErrorHandling:
         mock_config_manager_class.load.return_value = mock_config
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "config-set",
-            "--vast-api-key", "test_key"
-        ])
+        result = runner.invoke(cli, ["config-set", "--vast-api-key", "test_key"])
 
         assert result.exit_code == 1
         assert "Failed to update config" in result.output
@@ -422,10 +419,7 @@ class TestCLIFlags:
         mock_container_class.return_value = mock_container
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "list-instances",
-            "--platform", "runpod"
-        ])
+        result = runner.invoke(cli, ["list-instances", "--platform", "runpod"])
 
         assert result.exit_code == 0
         # Verify container was created with runpod platform
@@ -441,19 +435,29 @@ class TestCLIFlags:
 
         mock_container = Mock()
         mock_workflow_executor = Mock()
-        mock_workflow_executor.execute_workflow.return_value = True
+        from variousplug.utils import ExecutionResult
+
+        mock_workflow_executor.execute_workflow.return_value = ExecutionResult(
+            True, "Command executed"
+        )
         mock_container.workflow_executor = mock_workflow_executor
         mock_container_class.return_value = mock_container
 
         runner = CliRunner()
-        result = runner.invoke(cli, [
-            "run",
-            "--platform", "vast",
-            "--instance-id", "test_123",
-            "--no-sync",
-            "--",
-            "python", "script.py"
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "--platform",
+                "vast",
+                "--instance-id",
+                "test_123",
+                "--no-sync",
+                "run",
+                "--",
+                "python",
+                "script.py",
+            ],
+        )
 
         assert result.exit_code == 0
         mock_workflow_executor.execute_workflow.assert_called_once()
@@ -461,4 +465,4 @@ class TestCLIFlags:
         # Check the call arguments
         call_args = mock_workflow_executor.execute_workflow.call_args
         assert call_args[1]["instance_id"] == "test_123"
-        assert call_args[1]["skip_sync"] is True
+        assert call_args[1]["no_sync"] is True

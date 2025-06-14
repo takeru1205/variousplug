@@ -12,6 +12,9 @@ dependencies = [
     "runpod>=1.0.0",
     "rich>=13.0.0",
     "requests>=2.25.0",
+    "pandas>=2.3.0",
+    "torch>=2.7.1",
+    "numpy>=2.3.0",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +34,7 @@ dev = [
 
 [project.scripts]
 vp = "variousplug:main"
+fp = "variousplug:main"
 variousplug = "variousplug:main"
 
 [build-system]

@@ -550,3 +550,47 @@ vp destroy-instance your_instance_id
 ```
 
 This guide covers the essential aspects of using VariousPlug with RunPod. For advanced usage and platform-specific features, refer to the main VariousPlug documentation.
+
+
+Available GPU ids
+
+```
+AMD Instinct MI300X OAM
+NVIDIA A100 80GB PCIe
+NVIDIA A100-SXM4-80GB
+NVIDIA A30
+NVIDIA A40
+NVIDIA B200
+NVIDIA GeForce RTX 3070
+NVIDIA GeForce RTX 3080
+NVIDIA GeForce RTX 3080 Ti
+NVIDIA GeForce RTX 3090
+NVIDIA GeForce RTX 3090 Ti
+NVIDIA GeForce RTX 4070 Ti
+NVIDIA GeForce RTX 4080
+NVIDIA GeForce RTX 4080 SUPER
+NVIDIA GeForce RTX 4090
+NVIDIA GeForce RTX 5080
+NVIDIA GeForce RTX 5090
+NVIDIA H100 80GB HBM3
+NVIDIA H100 NVL
+NVIDIA H100 PCIe
+NVIDIA H200
+NVIDIA L4
+NVIDIA L40
+NVIDIA L40S
+NVIDIA RTX 2000 Ada Generation
+NVIDIA RTX 4000 Ada Generation
+NVIDIA RTX 5000 Ada Generation
+NVIDIA RTX 6000 Ada Generation
+NVIDIA RTX A2000
+NVIDIA RTX A4000
+NVIDIA RTX A4500
+NVIDIA RTX A5000
+NVIDIA RTX A6000
+NVIDIA RTX PRO 6000 Blackwell Workstation Edition
+Tesla V100-FHHL-16GB
+Tesla V100-PCIE-16GB
+Tesla V100-SXM2-16GB
+Tesla V100-SXM2-32GB
+```

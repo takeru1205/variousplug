@@ -198,3 +198,7 @@ cython_debug/
 .vpignore
 data/
 Dockerfile
+
+ml_test_project/data/*
+ml_test_project/models/*
+ml_test_project/results/*

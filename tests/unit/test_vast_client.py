@@ -1,6 +1,7 @@
 """
 Unit tests for Vast.ai client.
 """
+
 from unittest.mock import Mock, patch
 
 import pytest
@@ -45,7 +46,7 @@ class TestVastClient:
                 "gpu_name": "GTX_1080",
                 "image": "pytorch/pytorch",
                 "ssh_host": "ssh1.vast.ai",
-                "ssh_port": 12345
+                "ssh_port": 12345,
             },
             {
                 "id": 67890,
@@ -53,8 +54,8 @@ class TestVastClient:
                 "gpu_name": "RTX_3070",
                 "image": "tensorflow/tensorflow",
                 "ssh_host": None,
-                "ssh_port": None
-            }
+                "ssh_port": None,
+            },
         ]
         mock_sdk.show_instances.return_value = mock_instances
 
@@ -99,7 +100,7 @@ class TestVastClient:
                 "id": 12345,
                 "actual_status": "running",
                 "gpu_name": "GTX_1080",
-                "image": "pytorch/pytorch"
+                "image": "pytorch/pytorch",
             }
         ]
         mock_sdk.show_instances.return_value = mock_instances
@@ -144,10 +145,7 @@ class TestVastClient:
         mock_sdk.launch_instance.return_value = {"new_contract": 12345}
 
         client = VastClient("test_api_key")
-        request = CreateInstanceRequest(
-            gpu_type="GTX_1080",
-            image="pytorch/pytorch"
-        )
+        request = CreateInstanceRequest(gpu_type="GTX_1080", image="pytorch/pytorch")
 
         instance = client.create_instance(request)
 
@@ -174,7 +172,7 @@ class TestVastClient:
         client = VastClient("test_api_key")
         request = CreateInstanceRequest()  # No parameters
 
-        instance = client.create_instance(request)
+        client.create_instance(request)
 
         # Check default values were used
         call_kwargs = mock_sdk.launch_instance.call_args[1]
@@ -215,7 +213,10 @@ class TestVastClient:
         mock_vast_ai.return_value = mock_sdk
 
         # Make SDK methods fail to test direct API fallback
+        mock_sdk.api_call.side_effect = Exception("API Error")
         mock_sdk.destroy_instance.side_effect = Exception("SDK Error")
+        mock_sdk.delete_instance.side_effect = Exception("Delete Error")
+        mock_sdk.terminate_instance.side_effect = Exception("Terminate Error")
 
         # Mock successful direct API call
         mock_response = Mock()
@@ -233,7 +234,11 @@ class TestVastClient:
         """Test instance destruction when all methods fail."""
         mock_sdk = Mock()
         mock_vast_ai.return_value = mock_sdk
+        # Make all SDK methods fail
+        mock_sdk.api_call.side_effect = Exception("API Error")
         mock_sdk.destroy_instance.side_effect = Exception("SDK Error")
+        mock_sdk.delete_instance.side_effect = Exception("Delete Error")
+        mock_sdk.terminate_instance.side_effect = Exception("Terminate Error")
 
         client = VastClient("test_api_key")
 
@@ -251,12 +256,7 @@ class TestVastClient:
 
         # Mock instance without SSH
         mock_instances = [
-            {
-                "id": 12345,
-                "actual_status": "running",
-                "ssh_host": None,
-                "ssh_port": None
-            }
+            {"id": 12345, "actual_status": "running", "ssh_host": None, "ssh_port": None}
         ]
         mock_sdk.show_instances.return_value = mock_instances
 
@@ -275,12 +275,7 @@ class TestVastClient:
 
         # Mock instance with SSH
         mock_instances = [
-            {
-                "id": 12345,
-                "actual_status": "running",
-                "ssh_host": "ssh1.vast.ai",
-                "ssh_port": 12345
-            }
+            {"id": 12345, "actual_status": "running", "ssh_host": "ssh1.vast.ai", "ssh_port": 12345}
         ]
         mock_sdk.show_instances.return_value = mock_instances
 
@@ -296,7 +291,7 @@ class TestVastClient:
 
         assert result.success is True
         assert result.output == "Python 3.8.10"
-        assert result.return_code == 0
+        assert result.exit_code == 0
 
     @patch("variousplug.vast_client.VastAI")
     @patch("subprocess.run")
@@ -307,12 +302,7 @@ class TestVastClient:
 
         # Mock instance with SSH
         mock_instances = [
-            {
-                "id": 12345,
-                "actual_status": "running",
-                "ssh_host": "ssh1.vast.ai",
-                "ssh_port": 12345
-            }
+            {"id": 12345, "actual_status": "running", "ssh_host": "ssh1.vast.ai", "ssh_port": 12345}
         ]
         mock_sdk.show_instances.return_value = mock_instances
 
@@ -328,7 +318,7 @@ class TestVastClient:
 
         # Should fallback to simulation
         assert result.success is True
-        assert "simulation" in result.output.lower()
+        assert "simulated execution" in result.output.lower()
 
     @patch("variousplug.vast_client.VastAI")
     def test_execute_command_instance_not_found(self, mock_vast_ai):
@@ -350,12 +340,7 @@ class TestVastClient:
         mock_vast_ai.return_value = mock_sdk
 
         # Mock stopped instance
-        mock_instances = [
-            {
-                "id": 12345,
-                "actual_status": "stopped"
-            }
-        ]
+        mock_instances = [{"id": 12345, "actual_status": "stopped"}]
         mock_sdk.show_instances.return_value = mock_instances
 
         client = VastClient("test_api_key")
@@ -377,7 +362,7 @@ class TestVastClient:
             "ssh_port": 12345,
             "gpuCount": 1,
             "vcpuCount": 4,
-            "memoryInGb": 16
+            "memoryInGb": 16,
         }
 
         instance = client._create_instance_info(raw_data)
@@ -396,10 +381,7 @@ class TestVastClient:
         """Test _create_instance_info with minimal data."""
         client = VastClient("test_api_key")
 
-        raw_data = {
-            "id": 67890,
-            "actual_status": None
-        }
+        raw_data = {"id": 67890, "actual_status": None}
 
         instance = client._create_instance_info(raw_data)
 
@@ -427,9 +409,9 @@ class TestVastClient:
                 "https://console.vast.ai/api/v0/instances/12345/",
                 headers={
                     "Authorization": "Bearer test_api_key",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
-                timeout=30
+                timeout=30,
             )
 
     def test_try_direct_api_destroy_failure(self):
@@ -457,7 +439,7 @@ class TestVastClient:
                 additional_params={
                     "memory_gb": "32",
                     "price": "0.25",  # Should be capped at 0.50
-                    "custom_param": "value"
+                    "custom_param": "value",
                 }
             )
 

@@ -1,6 +1,7 @@
 """
 Configuration management for VariousPlug following SOLID principles.
 """
+
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +17,23 @@ class ConfigManager(IConfigManager):
     CONFIG_DIR = ".vp"
     CONFIG_FILE = "config.yaml"
 
-    def __init__(self, config_data: dict[str, Any], config_path: Path | None = None):
-        self._data = config_data
-        self._config_path = config_path or Path.cwd() / self.CONFIG_DIR / self.CONFIG_FILE
+    def __init__(
+        self, config_data: dict[str, Any] | Path | None = None, config_path: Path | None = None
+    ):
+        # Backward compatibility: support old constructor signature
+        if isinstance(config_data, Path) or config_data is None:
+            # Old API: ConfigManager(config_file) or ConfigManager()
+            config_file = (
+                config_data
+                if config_data is not None
+                else Path.cwd() / self.CONFIG_DIR / self.CONFIG_FILE
+            )
+            self._config_path = config_file
+            self._data = {}  # Start with empty config for old API
+        else:
+            # New API: ConfigManager(config_data, config_path)
+            self._data = config_data
+            self._config_path = config_path or Path.cwd() / self.CONFIG_DIR / self.CONFIG_FILE
 
     @classmethod
     def load(cls, config_path: Path | None = None) -> "ConfigManager":
@@ -37,36 +52,32 @@ class ConfigManager(IConfigManager):
                 config_data = yaml.safe_load(f) or {}
             return cls(config_data, config_path)
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML in config file: {e}")
+            raise ValueError(f"Invalid YAML in config file: {e}") from e
 
     @classmethod
-    def create_new(cls, project_name: str, vast_api_key: str | None = None,
-                   runpod_api_key: str | None = None, default_platform: str = "vast",
-                   data_dir: str = "data", base_image: str = "python:3.11-slim") -> "ConfigManager":
+    def create_new(
+        cls,
+        project_name: str,
+        vast_api_key: str | None = None,
+        runpod_api_key: str | None = None,
+        default_platform: str = "vast",
+        data_dir: str = "data",
+        base_image: str = "python:3.11-slim",
+    ) -> "ConfigManager":
         """Create a new configuration."""
         config_data = {
             "project": {
                 "name": project_name,
                 "data_dir": data_dir,
                 "base_image": base_image,
-                "working_dir": "/workspace"
+                "working_dir": "/workspace",
             },
             "platforms": {
                 "default": default_platform,
-                "vast": {
-                    "api_key": vast_api_key,
-                    "enabled": vast_api_key is not None
-                },
-                "runpod": {
-                    "api_key": runpod_api_key,
-                    "enabled": runpod_api_key is not None
-                }
+                "vast": {"api_key": vast_api_key, "enabled": vast_api_key is not None},
+                "runpod": {"api_key": runpod_api_key, "enabled": runpod_api_key is not None},
             },
-            "docker": {
-                "build_context": ".",
-                "dockerfile": "Dockerfile",
-                "build_args": {}
-            },
+            "docker": {"enabled": False, "build_context": ".", "dockerfile": "Dockerfile", "build_args": {}},
             "sync": {
                 "exclude_patterns": [
                     ".git/",
@@ -75,10 +86,10 @@ class ConfigManager(IConfigManager):
                     "*.pyc",
                     ".DS_Store",
                     "node_modules/",
-                    ".env"
+                    ".env",
                 ],
-                "include_patterns": ["*"]
-            }
+                "include_patterns": ["*"],
+            },
         }
 
         return cls(config_data)
@@ -94,8 +105,10 @@ class ConfigManager(IConfigManager):
         try:
             with open(config_path, "w") as f:
                 yaml.dump(self._data, f, default_flow_style=False, indent=2)
+        except (PermissionError, FileNotFoundError, yaml.YAMLError):
+            raise  # Re-raise as-is for specific file system and YAML errors
         except Exception as e:
-            raise ValueError(f"Failed to save config: {e}")
+            raise ValueError(f"Failed to save config: {e}") from e
 
     def get_project_config(self) -> dict[str, Any]:
         """Get project configuration."""
@@ -132,6 +145,75 @@ class ConfigManager(IConfigManager):
         if "platforms" not in self._data:
             self._data["platforms"] = {}
         self._data["platforms"]["default"] = platform
+
+    # Backward compatibility properties
+    @property
+    def config_file(self) -> Path:
+        """Backward compatibility property for config file path."""
+        return self._config_path
+
+    @property
+    def config(self) -> dict[str, Any]:
+        """Backward compatibility property for config data."""
+        return self._data
+
+    @config.setter
+    def config(self, value: dict[str, Any]):
+        """Backward compatibility setter for config data."""
+        self._data = value
+
+    def create_default_config(
+        self,
+        project_name: str = "default",
+        data_dir: str = "data",
+        base_image: str = "python:3.11-slim",
+    ) -> dict[str, Any]:
+        """Backward compatibility method for creating default config."""
+        default_config = {
+            "project": {
+                "name": project_name,
+                "data_dir": data_dir,
+                "base_image": base_image,
+                "working_dir": "/workspace",
+            },
+            "platforms": {
+                "default": "vast",
+                "vast": {"api_key": None, "enabled": False},
+                "runpod": {"api_key": None, "enabled": False},
+            },
+            "docker": {
+                "build_context": ".",
+                "dockerfile": "Dockerfile",
+                "build_args": {},
+            },
+            "sync": {
+                "exclude_patterns": [
+                    ".git/",
+                    ".vp/",
+                    "__pycache__/",
+                    "*.pyc",
+                    ".DS_Store",
+                    "node_modules/",
+                    ".env",
+                ],
+                "include_patterns": ["*"],
+            },
+        }
+        self._data.update(default_config)
+        return default_config
+
+    def load_from_file(self) -> dict[str, Any]:
+        """Backward compatibility instance method to load config from file."""
+        if not self._config_path.exists():
+            raise FileNotFoundError(
+                f"Configuration file not found: {self._config_path}\\n"
+                f"Run 'vp --init' to initialize configuration."
+            )
+
+        with open(self._config_path) as f:
+            config_data = yaml.safe_load(f) or {}
+        self._data = config_data
+        return config_data
 
 
 class ConfigDisplay:

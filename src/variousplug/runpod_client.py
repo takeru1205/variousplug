@@ -1,6 +1,7 @@
 """
 RunPod client integration for VariousPlug following SOLID principles.
 """
+
 import logging
 import time
 from typing import Any
@@ -80,7 +81,7 @@ class RunPodClient(BasePlatformClient):
                 container_disk_in_gb=15,  # Smaller disk to reduce cost
                 volume_in_gb=0,
                 env={"WORKSPACE": "/workspace"},
-                ports="22/tcp"
+                ports="22/tcp",
             )
 
             if not pod or "id" not in pod:
@@ -93,7 +94,7 @@ class RunPodClient(BasePlatformClient):
                 id=str(pod_id),
                 platform=self.platform_name,
                 status=InstanceStatus.PENDING,
-                raw_data=pod
+                raw_data=pod,
             )
 
         except Exception as e:
@@ -104,7 +105,7 @@ class RunPodClient(BasePlatformClient):
         """Destroy a pod."""
         try:
             self._initialize_client()
-            result = runpod.terminate_pod(instance_id)
+            runpod.terminate_pod(instance_id)
             print_info(f"Pod {instance_id} termination initiated")
             return True
 
@@ -112,7 +113,7 @@ class RunPodClient(BasePlatformClient):
             logger.error(f"Failed to destroy RunPod instance {instance_id}: {e}")
             raise
 
-    def execute_command(self, instance_id: str, command: list[str]) -> ExecutionResult:
+    def execute_command(self, instance_id: str, command: list[str], working_dir: str = "/workspace") -> ExecutionResult:
         """Execute a command on a RunPod pod via SSH."""
         try:
             # Get pod details
@@ -133,23 +134,30 @@ class RunPodClient(BasePlatformClient):
                 if "python --version" in cmd_str:
                     return ExecutionResult(True, "Python 3.10.12")
                 elif "echo" in cmd_str:
-                    echo_text = cmd_str.split("echo", 1)[1].strip().strip('"\'')
+                    echo_text = cmd_str.split("echo", 1)[1].strip().strip("\"'")
                     return ExecutionResult(True, echo_text)
                 else:
                     return ExecutionResult(True, f"Simulated execution: {cmd_str}")
 
             # Execute command via SSH
             import subprocess
+
             cmd_str = " ".join(command)
+            # Prepend cd command to ensure we're in the right working directory
+            full_cmd = f"cd {working_dir} && {cmd_str}"
 
             ssh_cmd = [
                 "ssh",
-                "-p", str(instance.ssh_port),
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
-                "-o", "LogLevel=ERROR",
+                "-p",
+                str(instance.ssh_port),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "LogLevel=ERROR",
                 f"{instance.ssh_username}@{instance.ssh_host}",
-                cmd_str
+                full_cmd,
             ]
 
             print_info(f"Executing via SSH: {cmd_str}")
@@ -170,8 +178,8 @@ class RunPodClient(BasePlatformClient):
         """Check if RunPod pod is ready."""
         try:
             pod = self.get_instance(instance.id)
-            return pod and pod.status == InstanceStatus.RUNNING
-        except:
+            return bool(pod and pod.status == InstanceStatus.RUNNING)
+        except Exception:
             return False
 
     def _create_instance_info(self, raw_data: dict[str, Any]) -> InstanceInfo:
@@ -219,5 +227,5 @@ class RunPodClient(BasePlatformClient):
             ssh_host=ssh_host,
             ssh_port=ssh_port,
             ssh_username=ssh_username,
-            raw_data=raw_data
+            raw_data=raw_data,
         )

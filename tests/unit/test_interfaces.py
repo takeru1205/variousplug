@@ -1,6 +1,7 @@
 """
 Unit tests for VariousPlug interfaces.
 """
+
 from typing import Any
 
 from variousplug.interfaces import (
@@ -30,7 +31,7 @@ class TestInstanceInfo:
             ssh_host="test.host",
             ssh_port=22,
             ssh_username="root",
-            raw_data={"test": "data"}
+            raw_data={"test": "data"},
         )
 
         assert instance.id == "test_123"
@@ -45,11 +46,7 @@ class TestInstanceInfo:
 
     def test_instance_info_defaults(self):
         """Test InstanceInfo with minimal parameters."""
-        instance = InstanceInfo(
-            id="test_456",
-            platform="runpod",
-            status=InstanceStatus.PENDING
-        )
+        instance = InstanceInfo(id="test_456", platform="runpod", status=InstanceStatus.PENDING)
 
         assert instance.id == "test_456"
         assert instance.platform == "runpod"
@@ -87,7 +84,7 @@ class TestCreateInstanceRequest:
             gpu_type="RTX_4090",
             image="pytorch/pytorch:latest",
             instance_type="gpu",
-            additional_params={"memory": "32GB"}
+            additional_params={"memory": "32GB"},
         )
 
         assert request.gpu_type == "RTX_4090"
@@ -126,7 +123,7 @@ class MockPlatformClient(IPlatformClient):
             platform="mock",
             status=InstanceStatus.PENDING,
             gpu_type=request.gpu_type,
-            image=request.image
+            image=request.image,
         )
         self.instances.append(instance)
         return instance
@@ -189,13 +186,19 @@ class MockFileSync(IFileSync):
         self.uploaded_files = []
         self.downloaded_files = []
 
-    def upload_files(self, instance_info: InstanceInfo, local_path: str,
-                    remote_path: str, exclude_patterns: list[str] = None) -> bool:
+    def upload_files(
+        self,
+        instance_info: InstanceInfo,
+        local_path: str,
+        remote_path: str,
+        exclude_patterns: list[str] | None = None,
+    ) -> bool:
         self.uploaded_files.append((instance_info, local_path, remote_path, exclude_patterns))
         return True
 
-    def download_files(self, instance_info: InstanceInfo, remote_path: str,
-                      local_path: str) -> bool:
+    def download_files(
+        self, instance_info: InstanceInfo, remote_path: str, local_path: str
+    ) -> bool:
         self.downloaded_files.append((instance_info, remote_path, local_path))
         return True
 
@@ -227,8 +230,13 @@ class MockDockerBuilder(IDockerBuilder):
     def __init__(self):
         self.built_images = []
 
-    def build_image(self, dockerfile_path: str, build_context: str, tag: str,
-                   build_args: dict[str, str] | None = None) -> str | None:
+    def build_image(
+        self,
+        dockerfile_path: str,
+        build_context: str,
+        tag: str,
+        build_args: dict[str, str] | None = None,
+    ) -> str | None:
         self.built_images.append((dockerfile_path, build_context, tag, build_args))
         return f"built:{tag}"
 

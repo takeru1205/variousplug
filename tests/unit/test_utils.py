@@ -1,12 +1,23 @@
 """
 Unit tests for VariousPlug utility functions.
 """
+
 from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
 
-from variousplug.utils import ExecutionResult, print_error, print_info, print_success, print_warning
+from variousplug.utils import (
+    ExecutionResult,
+    merge_exclude_patterns,
+    print_error,
+    print_info,
+    print_success,
+    print_warning,
+    read_vpignore_patterns,
+)
 
 
 class TestExecutionResult:
@@ -15,30 +26,22 @@ class TestExecutionResult:
     def test_execution_result_success(self):
         """Test ExecutionResult for successful execution."""
         result = ExecutionResult(
-            success=True,
-            output="Command executed successfully",
-            error="",
-            return_code=0
+            success=True, output="Command executed successfully", error="", exit_code=0
         )
 
         assert result.success is True
         assert result.output == "Command executed successfully"
         assert result.error == ""
-        assert result.return_code == 0
+        assert result.exit_code == 0
 
     def test_execution_result_failure(self):
         """Test ExecutionResult for failed execution."""
-        result = ExecutionResult(
-            success=False,
-            output="",
-            error="Command failed",
-            return_code=1
-        )
+        result = ExecutionResult(success=False, output="", error="Command failed", exit_code=1)
 
         assert result.success is False
         assert result.output == ""
         assert result.error == "Command failed"
-        assert result.return_code == 1
+        assert result.exit_code == 1
 
     def test_execution_result_defaults(self):
         """Test ExecutionResult with default values."""
@@ -47,31 +50,25 @@ class TestExecutionResult:
         assert result.success is True
         assert result.output == ""
         assert result.error == ""
-        assert result.return_code == 0
+        assert result.exit_code == 0
 
     def test_execution_result_with_output_only(self):
         """Test ExecutionResult with only output."""
-        result = ExecutionResult(
-            success=True,
-            output="Some output"
-        )
+        result = ExecutionResult(success=True, output="Some output")
 
         assert result.success is True
         assert result.output == "Some output"
         assert result.error == ""
-        assert result.return_code == 0
+        assert result.exit_code == 0
 
     def test_execution_result_with_error_only(self):
         """Test ExecutionResult with only error."""
-        result = ExecutionResult(
-            success=False,
-            error="Some error"
-        )
+        result = ExecutionResult(success=False, error="Some error")
 
         assert result.success is False
         assert result.output == ""
         assert result.error == "Some error"
-        assert result.return_code == 0
+        assert result.exit_code == 0
 
 
 class TestPrintFunctions:
@@ -83,7 +80,7 @@ class TestPrintFunctions:
             print_info("This is an info message")
             output = mock_stdout.getvalue()
 
-            assert "ℹ️" in output
+            assert "i" in output
             assert "This is an info message" in output
 
     def test_print_error(self):
@@ -118,7 +115,7 @@ class TestPrintFunctions:
         with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
             print_info("")
             output = mock_stdout.getvalue()
-            assert "ℹ️" in output
+            assert "i" in output
 
         with patch("sys.stderr", new_callable=StringIO) as mock_stderr:
             print_error("")
@@ -143,7 +140,7 @@ class TestPrintFunctions:
             print_info(multiline_message)
             output = mock_stdout.getvalue()
 
-            assert "ℹ️" in output
+            assert "i" in output
             assert "Line 1" in output
             assert "Line 2" in output
             assert "Line 3" in output
@@ -156,7 +153,7 @@ class TestPrintFunctions:
             print_info(special_message)
             output = mock_stdout.getvalue()
 
-            assert "ℹ️" in output
+            assert "i" in output
             assert special_message in output
 
     def test_print_functions_output_destinations(self):
@@ -164,9 +161,10 @@ class TestPrintFunctions:
         message = "test message"
 
         # Info, warning, success should go to stdout
-        with patch("sys.stdout", new_callable=StringIO) as mock_stdout, \
-             patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-
+        with (
+            patch("sys.stdout", new_callable=StringIO) as mock_stdout,
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+        ):
             print_info(message)
             print_warning(message)
             print_success(message)
@@ -178,9 +176,10 @@ class TestPrintFunctions:
             assert message not in stderr_output
 
         # Error should go to stderr
-        with patch("sys.stdout", new_callable=StringIO) as mock_stdout, \
-             patch("sys.stderr", new_callable=StringIO) as mock_stderr:
-
+        with (
+            patch("sys.stdout", new_callable=StringIO) as mock_stdout,
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+        ):
             print_error(message)
 
             stdout_output = mock_stdout.getvalue()
@@ -197,8 +196,9 @@ class TestPrintFunctions:
             print_info(long_message)
             output = mock_stdout.getvalue()
 
-            assert "ℹ️" in output
-            assert long_message in output
+            assert "i" in output
+            # Check that the message content is present (may be wrapped by Rich)
+            assert output.count("A") >= 1000
 
     def test_print_functions_unicode_emojis(self):
         """Test that emoji characters are properly handled."""
@@ -207,7 +207,7 @@ class TestPrintFunctions:
             output = mock_stdout.getvalue()
 
             # Check that the emoji is present (might be different based on system)
-            assert any(char in output for char in ["ℹ️", "ℹ", "i"])
+            assert "i" in output
 
     def test_execution_result_truthiness(self):
         """Test ExecutionResult truthiness based on success."""
@@ -219,25 +219,16 @@ class TestPrintFunctions:
         assert bool(failure_result) is False
 
         # Test in if statements
-        if success_result:
-            success_check = True
-        else:
-            success_check = False
+        success_check = bool(success_result)
         assert success_check is True
 
-        if failure_result:
-            failure_check = True
-        else:
-            failure_check = False
+        failure_check = bool(failure_result)
         assert failure_check is False
 
     def test_execution_result_string_representation(self):
         """Test ExecutionResult string representation."""
         result = ExecutionResult(
-            success=True,
-            output="Test output",
-            error="Test error",
-            return_code=0
+            success=True, output="Test output", error="Test error", exit_code=0
         )
 
         str_repr = str(result)
@@ -247,7 +238,7 @@ class TestPrintFunctions:
         assert "success=True" in str_repr
         assert "output='Test output'" in str_repr
         assert "error='Test error'" in str_repr
-        assert "return_code=0" in str_repr
+        assert "exit_code=0" in str_repr
 
     def test_execution_result_repr(self):
         """Test ExecutionResult repr."""
@@ -272,17 +263,12 @@ class TestPrintFunctions:
 
     def test_execution_result_with_none_values(self):
         """Test ExecutionResult with None values."""
-        result = ExecutionResult(
-            success=True,
-            output=None,
-            error=None,
-            return_code=None
-        )
+        result = ExecutionResult(success=True, output=None, error=None, exit_code=None)
 
         assert result.success is True
         assert result.output is None
         assert result.error is None
-        assert result.return_code is None
+        assert result.exit_code is None
 
     def test_print_functions_error_handling(self):
         """Test print functions handle errors gracefully."""
@@ -304,3 +290,151 @@ class TestPrintFunctions:
                 print_error("test")
             except Exception:
                 pytest.fail("print_error should handle stderr errors gracefully")
+
+
+class TestVpignoreFunctions:
+    """Test .vpignore file handling functions."""
+
+    def test_read_vpignore_patterns_with_file(self):
+        """Test reading patterns from .vpignore file."""
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            vpignore_path = tmpdir_path / ".vpignore"
+
+            # Create a test .vpignore file
+            vpignore_content = """# Test .vpignore file
+.venv/
+__pycache__/
+*.pyc
+
+# More patterns
+.env
+.git/
+node_modules/
+"""
+            vpignore_path.write_text(vpignore_content)
+
+            patterns = read_vpignore_patterns(tmpdir_path)
+
+            expected_patterns = [".venv/", "__pycache__/", "*.pyc", ".env", ".git/", "node_modules/"]
+            assert patterns == expected_patterns
+
+    def test_read_vpignore_patterns_without_file(self):
+        """Test reading patterns when .vpignore file doesn't exist."""
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+
+            patterns = read_vpignore_patterns(tmpdir_path)
+
+            assert patterns == []
+
+    def test_read_vpignore_patterns_empty_file(self):
+        """Test reading patterns from empty .vpignore file."""
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            vpignore_path = tmpdir_path / ".vpignore"
+
+            # Create empty .vpignore file
+            vpignore_path.write_text("")
+
+            patterns = read_vpignore_patterns(tmpdir_path)
+
+            assert patterns == []
+
+    def test_read_vpignore_patterns_comments_only(self):
+        """Test reading patterns from .vpignore file with only comments."""
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            vpignore_path = tmpdir_path / ".vpignore"
+
+            # Create .vpignore file with only comments
+            vpignore_content = """# This is a comment
+# Another comment
+# Last comment
+"""
+            vpignore_path.write_text(vpignore_content)
+
+            patterns = read_vpignore_patterns(tmpdir_path)
+
+            assert patterns == []
+
+    def test_read_vpignore_patterns_mixed_content(self):
+        """Test reading patterns from .vpignore file with mixed content."""
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            vpignore_path = tmpdir_path / ".vpignore"
+
+            # Create .vpignore file with mixed content
+            vpignore_content = """# Comment at start
+
+.venv/
+# Comment in middle
+__pycache__/
+
+# Comment with pattern after
+*.pyc
+"""
+            vpignore_path.write_text(vpignore_content)
+
+            patterns = read_vpignore_patterns(tmpdir_path)
+
+            expected_patterns = [".venv/", "__pycache__/", "*.pyc"]
+            assert patterns == expected_patterns
+
+    def test_read_vpignore_patterns_default_path(self):
+        """Test reading patterns with default path (current directory)."""
+        # Should not raise an exception even if no .vpignore exists
+        patterns = read_vpignore_patterns()
+        assert isinstance(patterns, list)
+
+    def test_merge_exclude_patterns_no_duplicates(self):
+        """Test merging exclude patterns removes duplicates."""
+        config_patterns = [".git/", "__pycache__/", "*.pyc"]
+        vpignore_patterns = [".venv/", "__pycache__/", "*.py"]
+
+        merged = merge_exclude_patterns(config_patterns, vpignore_patterns)
+
+        # Should contain all unique patterns
+        expected_patterns = {".git/", "__pycache__/", "*.pyc", ".venv/", "*.py"}
+        assert set(merged) == expected_patterns
+        assert len(merged) == len(expected_patterns)
+
+    def test_merge_exclude_patterns_empty_lists(self):
+        """Test merging with empty lists."""
+        merged1 = merge_exclude_patterns([], [".venv/", "*.pyc"])
+        assert set(merged1) == {".venv/", "*.pyc"}
+
+        merged2 = merge_exclude_patterns([".git/", "*.log"], [])
+        assert set(merged2) == {".git/", "*.log"}
+
+        merged3 = merge_exclude_patterns([], [])
+        assert merged3 == []
+
+    def test_merge_exclude_patterns_identical_lists(self):
+        """Test merging identical lists."""
+        patterns = [".git/", "__pycache__/", "*.pyc"]
+        merged = merge_exclude_patterns(patterns, patterns)
+
+        assert set(merged) == set(patterns)
+        assert len(merged) == len(patterns)
+
+    def test_read_vpignore_patterns_with_whitespace(self):
+        """Test reading patterns with various whitespace."""
+        with TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            vpignore_path = tmpdir_path / ".vpignore"
+
+            # Create .vpignore file with whitespace
+            vpignore_content = """  .venv/
+\t__pycache__/\t
+*.pyc
+
+\t\t
+  .env
+"""
+            vpignore_path.write_text(vpignore_content)
+
+            patterns = read_vpignore_patterns(tmpdir_path)
+
+            expected_patterns = [".venv/", "__pycache__/", "*.pyc", ".env"]
+            assert patterns == expected_patterns

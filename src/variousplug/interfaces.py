@@ -1,6 +1,7 @@
 """
 Abstract interfaces for VariousPlug following SOLID principles.
 """
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
@@ -11,6 +12,7 @@ from .utils import ExecutionResult
 
 class InstanceStatus(Enum):
     """Standard instance status enumeration."""
+
     PENDING = "pending"
     STARTING = "starting"
     RUNNING = "running"
@@ -23,6 +25,7 @@ class InstanceStatus(Enum):
 @dataclass
 class InstanceInfo:
     """Standardized instance information."""
+
     id: str
     platform: str
     status: InstanceStatus
@@ -37,6 +40,7 @@ class InstanceInfo:
 @dataclass
 class CreateInstanceRequest:
     """Request object for creating instances."""
+
     gpu_type: str | None = None
     instance_type: str | None = None
     image: str | None = None
@@ -81,14 +85,20 @@ class IFileSync(ABC):
     """Interface for file synchronization (Interface Segregation Principle)."""
 
     @abstractmethod
-    def upload_files(self, instance_info: InstanceInfo, local_path: str,
-                    remote_path: str, exclude_patterns: list[str]) -> bool:
+    def upload_files(
+        self,
+        instance_info: InstanceInfo,
+        local_path: str,
+        remote_path: str,
+        exclude_patterns: list[str],
+    ) -> bool:
         """Upload files to remote instance."""
         pass
 
     @abstractmethod
-    def download_files(self, instance_info: InstanceInfo, remote_path: str,
-                      local_path: str) -> bool:
+    def download_files(
+        self, instance_info: InstanceInfo, remote_path: str, local_path: str
+    ) -> bool:
         """Download files from remote instance."""
         pass
 
@@ -97,8 +107,13 @@ class IDockerBuilder(ABC):
     """Interface for Docker operations (Interface Segregation Principle)."""
 
     @abstractmethod
-    def build_image(self, dockerfile_path: str, build_context: str,
-                   tag: str, build_args: dict[str, str] | None = None) -> str | None:
+    def build_image(
+        self,
+        dockerfile_path: str,
+        build_context: str,
+        tag: str,
+        build_args: dict[str, str] | None = None,
+    ) -> str | None:
         """Build Docker image."""
         pass
 
@@ -141,7 +156,7 @@ class IPlatformFactory(ABC):
         pass
 
     @abstractmethod
-    def create_file_sync(self, platform: str, config: dict[str, Any] = None) -> IFileSync:
+    def create_file_sync(self, platform: str, config: dict[str, Any] | None = None) -> IFileSync:
         """Create file sync client."""
         pass
 
@@ -155,10 +170,15 @@ class IWorkflowExecutor(ABC):
     """Interface for workflow execution (Single Responsibility Principle)."""
 
     @abstractmethod
-    def execute_workflow(self, command: list[str], platform: str,
-                        instance_id: str | None = None,
-                        sync_only: bool = False, no_sync: bool = False,
-                        dockerfile: str | None = None,
-                        working_dir: str = "/workspace") -> ExecutionResult:
+    def execute_workflow(
+        self,
+        command: list[str],
+        platform: str,
+        instance_id: str | None = None,
+        sync_only: bool = False,
+        no_sync: bool = False,
+        dockerfile: str | None = None,
+        working_dir: str = "/workspace",
+    ) -> ExecutionResult:
         """Execute the complete workflow."""
         pass

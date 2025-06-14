@@ -1,6 +1,7 @@
 """
 Unit tests for VariousPlug factory pattern implementation.
 """
+
 from unittest.mock import Mock, patch
 
 import pytest
@@ -248,7 +249,7 @@ class TestPlatformFactory:
         assert sync1 is not sync2
 
         # But should be same type
-        assert type(sync1) == type(sync2)
+        assert type(sync1) is type(sync2)
 
     def test_platform_case_sensitivity(self):
         """Test platform names are case sensitive."""

@@ -190,10 +190,14 @@ class DockerBuilder(IDockerBuilder):
     def _get_docker_client(self):
         """Lazy initialization of Docker client."""
         if self._docker_client is None:
-            import docker
-
             try:
+                import docker
                 self._docker_client = docker.from_env()
+            except ImportError:
+                raise ImportError(
+                    "Docker package is required for Docker building. "
+                    "Install with: pip install variousplug[docker]"
+                ) from None
             except Exception as e:
                 logger.error(f"Failed to initialize Docker client: {e}")
                 raise

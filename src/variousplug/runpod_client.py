@@ -4,9 +4,12 @@ RunPod client integration for VariousPlug following SOLID principles.
 
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import runpod
+if TYPE_CHECKING:
+    import runpod
+else:
+    runpod = None
 
 from .base import BasePlatformClient
 from .interfaces import CreateInstanceRequest, InstanceInfo, InstanceStatus
@@ -20,17 +23,30 @@ class RunPodClient(BasePlatformClient):
 
     def __init__(self, api_key: str):
         super().__init__(api_key, "runpod")
+        self._runpod_module = None
+
+    def _get_runpod(self):
+        """Lazy load runpod module to avoid multiprocessing issues during import."""
+        if self._runpod_module is None:
+            try:
+                import runpod as runpod_module
+                self._runpod_module = runpod_module
+            except ImportError as e:
+                raise ImportError("runpod package is required for RunPod client") from e
+        return self._runpod_module
 
     def _create_client(self):
         """Initialize RunPod SDK."""
-        runpod.api_key = self.api_key
-        return runpod  # RunPod uses module-level functions
+        runpod_module = self._get_runpod()
+        runpod_module.api_key = self.api_key
+        return runpod_module  # RunPod uses module-level functions
 
     def list_instances(self) -> list[InstanceInfo]:
         """List all pods (instances)."""
         try:
             self._initialize_client()
-            pods = runpod.get_pods()
+            runpod_module = self._get_runpod()
+            pods = runpod_module.get_pods()
 
             return [self._create_instance_info(pod) for pod in pods]
 
@@ -42,7 +58,8 @@ class RunPodClient(BasePlatformClient):
         """Get specific pod details."""
         try:
             self._initialize_client()
-            pod = runpod.get_pod(instance_id)
+            runpod_module = self._get_runpod()
+            pod = runpod_module.get_pod(instance_id)
 
             if pod:
                 return self._create_instance_info(pod)
@@ -70,7 +87,8 @@ class RunPodClient(BasePlatformClient):
             print_info(f"Image: {image_name}")
 
             # Create GPU pod with cheaper options
-            pod = runpod.create_pod(
+            runpod_module = self._get_runpod()
+            pod = runpod_module.create_pod(
                 name=pod_name,
                 image_name=image_name,
                 gpu_type_id=gpu_type,
@@ -105,7 +123,8 @@ class RunPodClient(BasePlatformClient):
         """Destroy a pod."""
         try:
             self._initialize_client()
-            runpod.terminate_pod(instance_id)
+            runpod_module = self._get_runpod()
+            runpod_module.terminate_pod(instance_id)
             print_info(f"Pod {instance_id} termination initiated")
             return True
 

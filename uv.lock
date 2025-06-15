@@ -2606,7 +2606,7 @@ wheels = [
 
 [[package]]
 name = "variousplug"
-version = "0.1.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -2621,27 +2621,10 @@ dependencies = [
     { name = "vastai-sdk" },
 ]
 
-[package.optional-dependencies]
-dev = [
-    { name = "coverage" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-mock" },
-    { name = "ruff" },
-]
-test = [
-    { name = "coverage" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-mock" },
-]
-
 [package.dev-dependencies]
 dev = [
+    { name = "mypy" },
+    { name = "pre-commit" },
     { name = "ruff" },
 ]
 test = [
@@ -2655,29 +2638,23 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
-    { name = "coverage", marker = "extra == 'test'", specifier = ">=7.0.0" },
     { name = "docker", specifier = ">=6.0.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "numpy", specifier = ">=2.3.0" },
     { name = "pandas", specifier = ">=2.3.0" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0" },
-    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.21.0" },
-    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=4.0.0" },
-    { name = "pytest-mock", marker = "extra == 'test'", specifier = ">=3.10.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", specifier = ">=2.25.0" },
     { name = "rich", specifier = ">=13.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "runpod", specifier = ">=1.0.0" },
     { name = "torch", specifier = ">=2.7.1" },
-    { name = "variousplug", extras = ["test"], marker = "extra == 'dev'" },
     { name = "vastai-sdk", specifier = ">=0.1.0" },
 ]
-provides-extras = ["test", "dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.11.13" }]
+dev = [
+    { name = "mypy", specifier = ">=1.0.0" },
+    { name = "pre-commit", specifier = ">=3.0.0" },
+    { name = "ruff", specifier = ">=0.11.13" },
+]
 test = [
     { name = "coverage", specifier = ">=7.9.1" },
     { name = "pytest", specifier = ">=8.4.0" },

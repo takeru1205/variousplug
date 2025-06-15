@@ -30,6 +30,7 @@ class RunPodClient(BasePlatformClient):
         if self._runpod_module is None:
             try:
                 import runpod as runpod_module
+
                 self._runpod_module = runpod_module
             except ImportError as e:
                 raise ImportError("runpod package is required for RunPod client") from e

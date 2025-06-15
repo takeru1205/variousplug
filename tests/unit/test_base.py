@@ -10,6 +10,7 @@ import pytest
 try:
     import docker
     import docker.errors
+
     HAS_DOCKER = True
 except ImportError:
     docker = None  # type: ignore

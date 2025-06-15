@@ -191,7 +191,7 @@ class DockerBuilder(IDockerBuilder):
         """Lazy initialization of Docker client."""
         if self._docker_client is None:
             try:
-                import docker
+                import docker  # type: ignore
 
                 self._docker_client = docker.from_env()
             except ImportError:

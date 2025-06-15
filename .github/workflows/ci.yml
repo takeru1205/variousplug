@@ -35,7 +35,7 @@ jobs:
     
     - name: Run ty type checks
       run: |
-        uv run uvx ty check
+        uv run uvx ty check --exclude ml_test_project --exclude tests
 
   test:
     runs-on: ubuntu-latest

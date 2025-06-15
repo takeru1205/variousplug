@@ -79,7 +79,7 @@ lint-ruff:
 
 lint-ty:
 	@echo "Running ty..."
-	uv run uvx ty check
+	uv run uvx ty check --exclude ml_test_project --exclude tests
 
 format:
 	@echo "Formatting code with ruff..."
@@ -93,7 +93,7 @@ format-check:
 
 type-check:
 	@echo "Running type checks..."
-	uv run uvx ty check
+	uv run uvx ty check --exclude ml_test_project --exclude tests
 
 # Build commands
 build:

@@ -5,9 +5,15 @@ Unit tests for VariousPlug base classes.
 import subprocess
 from unittest.mock import Mock, patch
 
-import docker
-import docker.errors
 import pytest
+
+try:
+    import docker
+    import docker.errors
+    HAS_DOCKER = True
+except ImportError:
+    docker = None  # type: ignore
+    HAS_DOCKER = False
 
 from variousplug.base import BasePlatformClient, DockerBuilder, NoOpFileSync, RsyncFileSync
 from variousplug.interfaces import InstanceInfo, InstanceStatus
@@ -361,6 +367,7 @@ class TestNoOpFileSync:
         assert result is True
 
 
+@pytest.mark.skipif(not HAS_DOCKER, reason="Docker not available")
 class TestDockerBuilder:
     """Test DockerBuilder implementation."""
 

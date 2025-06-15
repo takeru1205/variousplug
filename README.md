@@ -17,9 +17,9 @@
 - 🧪 **Comprehensive Testing** - Full test suite with CI/CD
 - 🔧 **Modern Tooling** - Ruff linting, GitHub Actions, Python 3.11+
 
-## Getting Started
+## Quick Start Guide
 
-### 1. Create Platform Accounts
+### Step 1: Create Platform Accounts
 
 Before using VariousPlug, you'll need accounts on the platforms:
 
@@ -30,13 +30,13 @@ Before using VariousPlug, you'll need accounts on the platforms:
 
 *Note: Using the referral links helps support the development of VariousPlug at no extra cost to you.*
 
-### 2. Installation
+### Step 2: Installation
 
 ```bash
 uv tool install git+https://github.com/takeru1205/variousplug.git
 ```
 
-### 3. Quick Start
+### Step 3: Configuration & First Run
 
 #### Initialize Configuration
 ```bash
@@ -66,11 +66,21 @@ vp python --version
 vp run -- python train_model.py
 
 # Run with specific platform
-vp run --platform vast -- python script.py
+vp --platform vast run -- python script.py
 
 # Run with specific instance
-vp run --instance-id 12345 -- python script.py
+vp --instance-id 12345 run -- python script.py
 ```
+
+## How It Works
+
+VariousPlug uses a **Sync-Run-Sync (SRS)** workflow:
+
+1. **📤 Sync Up**: Upload your local files to remote `/workspace` via rsync over SSH
+2. **🚀 Run**: Execute commands directly on pre-configured GPU instances  
+3. **📥 Sync Down**: Download complete workspace including all generated files
+
+> 💡 **Note**: Docker build is optional and disabled by default since cloud instances come with pre-configured environments (PyTorch, CUDA, etc.). Use `--enable-docker` flag if containerization is needed.
 
 ## Usage Examples
 
@@ -95,15 +105,15 @@ vp python hello.py
 vp list-instances
 vp ls  # Alias
 
-# Create new instance (auto-selects available GPU)
+# Create new instance
 vp create-instance --platform vast
 vp create-instance --platform runpod
 
 # Sync files only (no execution)
-vp run --sync-only -- python script.py
+vp --sync-only run -- python script.py
 
 # Run without sync (use existing files)
-vp run --no-sync -- python script.py
+vp --no-sync run -- python script.py
 
 # Custom Dockerfile (Docker optional)
 vp run --dockerfile custom.Dockerfile --enable-docker -- python script.py
@@ -167,9 +177,9 @@ vp python train.py  # Files sync via rsync over SSH
 vp config-set --runpod-api-key YOUR_KEY
 vp config-set --default-platform runpod
 
-# 2. Create instance (auto-selects available GPU)
+# 2. Create instance
 vp create-instance --platform runpod
-vp run --no-sync -- "apt update && apt install -y rsync"
+vp --no-sync run -- "apt update && apt install -y rsync"
 
 # 3. Run with rsync-based sync
 vp run -- python train.py
@@ -229,9 +239,9 @@ VariousPlug has been completely reimplemented with modern Python tooling and enh
 
 **GPU Type Errors**
 ```bash
-# Don't specify GPU type - let it auto-select
+# Without GPU type specification
 vp create-instance --platform runpod  # ✅ Correct
-vp create-instance --platform runpod --gpu-type RTX4000  # ❌ May fail
+vp create-instance --platform runpod --gpu-type "NVIDIA RTX 4000 Ada Generation"
 ```
 
 **Instance Destruction**
@@ -239,7 +249,7 @@ vp create-instance --platform runpod --gpu-type RTX4000  # ❌ May fail
 # Always specify platform when destroying
 vp destroy-instance ID --platform vast    # ✅ Correct
 vp destroy-instance ID --platform runpod  # ✅ Correct
-vp destroy-instance ID                     # ❌ May use wrong platform
+vp destroy-instance ID                     # Uses default platform
 ```
 
 **File Sync Issues**

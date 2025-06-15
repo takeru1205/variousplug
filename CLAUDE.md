@@ -39,9 +39,9 @@ uv run vp python --version
 
 # Traditional run command syntax
 uv run vp run -- python script.py
-uv run vp run --platform vast -- python --version
-uv run vp run --sync-only -- python script.py
-uv run vp run --no-sync -- python --version
+uv run vp --platform vast run -- python --version
+uv run vp --sync-only run -- python script.py
+uv run vp --no-sync run -- python --version
 
 # Instance management  
 uv run vp create-instance --platform vast --gpu-type RTX3090
@@ -51,10 +51,10 @@ uv run vp destroy-instance INSTANCE_ID
 ### Testing Commands
 ```bash
 # Build only (test Docker build)
-uv run vp run --sync-only -- echo "test"
+uv run vp --sync-only run -- echo "test"
 
 # Skip sync (test command execution only)
-uv run vp run --no-sync -- python --version
+uv run vp --no-sync run -- python --version
 ```
 
 ## Architecture

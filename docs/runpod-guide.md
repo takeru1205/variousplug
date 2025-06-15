@@ -146,7 +146,7 @@ vp create-instance --platform runpod \
 vp run -- python --version
 
 # Run with specific instance
-vp run --instance-id your_instance_id -- python --version
+vp --instance-id your_instance_id run -- python --version
 ```
 
 ## Instance Management
@@ -232,13 +232,13 @@ VariousPlug uses **rsync over SSH** for RunPod file transfers, which requires:
 vp run -- python train.py
 
 # Skip sync (if files already uploaded)
-vp run --no-sync -- python train.py
+vp --no-sync run -- python train.py
 
 # Sync only (upload files without running)
-vp run --sync-only -- python train.py
+vp --sync-only run -- python train.py
 
 # Specify instance
-vp run --instance-id your_instance_id -- python train.py
+vp --instance-id your_instance_id run -- python train.py
 ```
 
 ### 3. Example Workflows
@@ -292,7 +292,9 @@ vp run -- python train.py
 
 ```bash
 # Process data with specific GPU
-vp run --gpu-type "NVIDIA GeForce RTX 3070" -- python process_data.py
+# Create instance with specific GPU first
+vp create-instance --platform runpod --gpu-type "NVIDIA GeForce RTX 3070"
+vp run -- python process_data.py
 
 # Run Jupyter notebook
 vp run -- jupyter notebook --ip=0.0.0.0 --allow-root --no-browser
@@ -322,7 +324,7 @@ CMD ["python", "train.py"]
 EOF
 
 # Run with custom Dockerfile
-vp run --dockerfile Dockerfile -- python train.py
+vp run --dockerfile Dockerfile --enable-docker -- python train.py
 ```
 
 ## Cost Optimization
@@ -399,7 +401,7 @@ vp config-set --runpod-api-key "rpa_your_api_key_here"
 
 ```bash
 # Error: "There are no longer any instances available"
-# Solution: Try different GPU types or wait
+# Solution: Try different GPU types
 vp create-instance --platform runpod --gpu-type "NVIDIA GeForce RTX 3070"
 vp create-instance --platform runpod --gpu-type "NVIDIA RTX 4000 Ada Generation"
 ```
@@ -408,8 +410,8 @@ vp create-instance --platform runpod --gpu-type "NVIDIA RTX 4000 Ada Generation"
 
 ```bash
 # Error: "Permission denied (publickey,password)"
-# This is expected - VariousPlug will fallback to simulation mode
-# SSH setup requires additional configuration not covered in this guide
+# Cause: SSH keys not configured on pod
+# Solution: SSH setup required for file synchronization
 ```
 
 #### 4. Instance Not Running
@@ -418,8 +420,8 @@ vp create-instance --platform runpod --gpu-type "NVIDIA RTX 4000 Ada Generation"
 # Check instance status
 vp list-instances
 
-# Wait for instance to be ready (can take 1-3 minutes)
-# Status should show "running"
+# Wait for instance to be ready (startup time: 1-3 minutes)
+# Status will show "running" when ready
 ```
 
 ### Debug Mode
@@ -552,7 +554,7 @@ vp destroy-instance your_instance_id
 This guide covers the essential aspects of using VariousPlug with RunPod. For advanced usage and platform-specific features, refer to the main VariousPlug documentation.
 
 
-Available GPU ids
+## Available GPU IDs
 
 ```
 AMD Instinct MI300X OAM

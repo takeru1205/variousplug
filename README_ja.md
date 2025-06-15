@@ -51,16 +51,21 @@ vp config-set --runpod-api-key YOUR_RUNPOD_API_KEY
 vp config-set --default-platform vast
 ```
 
-### 3. リモートホストでコマンドを実行
+#### リモートホストでコマンドを実行
 ```bash
-# リモートGPUでPythonスクリプトを実行
+# 簡単な直接実行（新機能！）
+vp python train_model.py
+vp "cd /workspace && python script.py"
+vp python --version
+
+# 従来の明示的な構文
 vp run -- python train_model.py
 
 # 特定のプラットフォームで実行
-vp run --platform vast -- python script.py
+vp --platform vast run -- python script.py
 
 # 特定のインスタンスで実行
-vp run --instance-id 12345 -- python script.py
+vp --instance-id 12345 run -- python script.py
 ```
 
 ## 使用例
@@ -89,10 +94,10 @@ vp list-instances
 vp create-instance --platform vast --gpu-type RTX3090
 
 # ファイル同期のみ（実行なし）
-vp run --sync-only -- python script.py
+vp --sync-only run -- python script.py
 
 # 同期なしで実行（既存ファイルを使用）
-vp run --no-sync -- python script.py
+vp --no-sync run -- python script.py
 
 # カスタムDockerfile
 vp run --dockerfile custom.Dockerfile -- python script.py
@@ -134,7 +139,7 @@ vp config-set --default-platform runpod
 
 # 2. SSHキーの設定とrsyncのインストール
 vp create-instance --platform runpod --gpu-type RTX4000
-vp run --no-sync -- "apt update && apt install -y rsync"
+vp --no-sync run -- "apt update && apt install -y rsync"
 
 # 3. rsyncベースの同期で実行
 vp run -- python train.py

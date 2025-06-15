@@ -11,7 +11,7 @@ This guide compares the two supported platforms in VariousPlug to help you choos
 | **Pricing** | Spot market pricing | Fixed pricing tiers |
 | **GPU Variety** | Wide variety | Curated selection |
 | **Instance Types** | Bare metal | Containerized pods |
-| **Reliability** | Variable (spot market) | High (dedicated) |
+| **Reliability** | Spot market based | Dedicated resources |
 
 ## File Synchronization
 
@@ -38,7 +38,7 @@ vp run -- python script.py  # Files sync automatically
 # Requires SSH key setup
 vp config-set --runpod-api-key YOUR_KEY
 # + SSH key configuration on pods
-vp run -- "apt update && apt install -y rsync"  # First time
+vp --no-sync run -- "apt update && apt install -y rsync"  # First time
 vp run -- python script.py  # Files sync via rsync
 ```
 
@@ -105,16 +105,16 @@ vp create-instance --platform runpod --gpu-type RTX4000
 1. Get API key from RunPod console
 2. Configure VariousPlug: `vp config-set --runpod-api-key YOUR_KEY`
 3. Create pod with SSH keys configured
-4. Install rsync on pod: `vp run --no-sync -- "apt update && apt install -y rsync"`
+4. Install rsync on pod: `vp --no-sync run -- "apt update && apt install -y rsync"`
 5. Start using: `vp run -- python script.py`
 
 ## Performance Characteristics
 
 ### Vast.ai
 - **File Transfer**: Fast (native SDK)
-- **Instance Startup**: Variable (5-60 seconds)
+- **Instance Startup**: 5-60 seconds depending on availability
 - **Availability**: Spot-based (may be preempted)
-- **Network**: Variable quality
+- **Network**: Depends on host provider
 
 ### RunPod
 - **File Transfer**: Fast (rsync over dedicated network)

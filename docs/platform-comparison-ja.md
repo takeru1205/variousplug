@@ -38,7 +38,7 @@ vp run -- python script.py  # ファイルが自動同期
 # SSHキー設定が必要
 vp config-set --runpod-api-key YOUR_KEY
 # + ポッドでのSSHキー設定
-vp run -- "apt update && apt install -y rsync"  # 初回
+vp --no-sync run -- "apt update && apt install -y rsync"  # 初回
 vp run -- python script.py  # rsync経由でファイル同期
 ```
 
@@ -105,7 +105,7 @@ vp create-instance --platform runpod --gpu-type RTX4000
 1. RunPodコンソールからAPIキーを取得
 2. VariousPlugを設定: `vp config-set --runpod-api-key YOUR_KEY`
 3. SSHキー設定でポッドを作成
-4. ポッドにrsyncをインストール: `vp run --no-sync -- "apt update && apt install -y rsync"`
+4. ポッドにrsyncをインストール: `vp --no-sync run -- "apt update && apt install -y rsync"`
 5. 使用開始: `vp run -- python script.py`
 
 ## パフォーマンス特性

@@ -148,7 +148,7 @@ vp create-instance --platform vast \
 vp run -- python --version
 
 # Run with specific instance
-vp run --instance-id your_instance_id -- python --version
+vp --instance-id your_instance_id run -- python --version
 ```
 
 ## Instance Management
@@ -246,13 +246,13 @@ VariousPlug uses the **native Vast.ai SDK** for file transfers, which provides:
 vp run -- python train.py
 
 # Skip sync (if files already uploaded)
-vp run --no-sync -- python train.py
+vp --no-sync run -- python train.py
 
 # Sync only (upload files without running)
-vp run --sync-only -- python train.py
+vp --sync-only run -- python train.py
 
 # Specify instance and platform
-vp run --platform vast --instance-id your_instance_id -- python train.py
+vp --platform vast --instance-id your_instance_id run -- python train.py
 ```
 
 ### 3. Example Workflows
@@ -313,7 +313,9 @@ vp run -- python train.py
 
 ```bash
 # Process data with specific GPU
-vp run --gpu-type "GTX_1080" -- python process_data.py
+# Create instance with specific GPU first
+vp create-instance --platform vast --gpu-type "GTX_1080"
+vp run -- python process_data.py
 
 # Run Jupyter notebook (if image supports it)
 vp run -- jupyter notebook --ip=0.0.0.0 --allow-root --no-browser
@@ -343,7 +345,7 @@ CMD ["python", "train.py"]
 EOF
 
 # Run with custom Dockerfile
-vp run --dockerfile Dockerfile -- python train.py
+vp run --dockerfile Dockerfile --enable-docker -- python train.py
 ```
 
 ## Cost Optimization
@@ -423,7 +425,7 @@ vp config-set --vast-api-key "your_vast_api_key_here"
 
 ```bash
 # Error: "No instances available with the specified requirements"
-# Solution: Try different GPU types or increase price limit
+# Solution: Try different GPU types
 vp create-instance --platform vast --gpu-type "GTX_1080"
 vp create-instance --platform vast --gpu-type "GTX_1070"
 ```
@@ -431,9 +433,9 @@ vp create-instance --platform vast --gpu-type "GTX_1070"
 #### 3. SSH Connection Issues
 
 ```bash
-# Warning: "SSH not available, using simulation"
-# This is normal - SSH requires additional setup
-# Commands will run in simulation mode for testing
+# Info: SSH not required for Vast.ai
+# VariousPlug uses native SDK for file transfers
+# Commands execute normally on remote instances
 ```
 
 #### 4. Instance Not Starting
@@ -442,8 +444,8 @@ vp create-instance --platform vast --gpu-type "GTX_1070"
 # Check instance status
 vp ls --platform vast
 
-# Wait for instance to be ready (can take 1-5 minutes)
-# Status should show "running"
+# Wait for instance to be ready (startup time: 1-5 minutes)
+# Status will show "running" when ready
 ```
 
 #### 5. High Costs
@@ -660,7 +662,7 @@ To set up SSH access:
 2. Add public key to Vast.ai account
 3. Connect manually with `ssh -p <port> root@<host>`
 
-*Note: SSH setup is optional - VariousPlug works in simulation mode without it.*
+*Note: SSH setup is optional - VariousPlug uses the native Vast.ai SDK for file transfers.*
 
 ### Multiple Instances
 
@@ -673,8 +675,8 @@ vp create-instance --platform vast --gpu-type "GTX_1080"
 vp ls
 
 # Run on specific instances
-vp run --instance-id instance1 -- python task1.py
-vp run --instance-id instance2 -- python task2.py
+vp --instance-id instance1 run -- python task1.py
+vp --instance-id instance2 run -- python task2.py
 
 # Clean up all instances
 vp destroy-instance instance1

@@ -80,11 +80,9 @@ jobs:
     - name: Generate changelog
       id: changelog
       run: |
-        echo "## Changes" > CHANGELOG.md
-        git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
-        echo "CHANGELOG<<CHANGELOG_DELIMITER_END" >> $GITHUB_OUTPUT
-        cat CHANGELOG.md >> $GITHUB_OUTPUT
-        echo "CHANGELOG_DELIMITER_END" >> $GITHUB_OUTPUT
+        CHANGELOG_CONTENT="## Changes
+        $(git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD)"
+        echo "CHANGELOG=$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
     
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2

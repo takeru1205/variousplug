@@ -2,7 +2,7 @@
 
 **[日本語版 README](README_ja.md) | [English README](README.md)**
 
-`vp` is a command-line interface (CLI) tool originally based on [fireplug](https://github.com/koheiw/fireplug), but restructured and repurposed to support [vast.ai](https://vast.ai) and [RunPod](https://runpod.io).
+`vp` is a command-line interface (CLI) tool originally based on [fireplug](https://github.com/smly/fireplug), but restructured and repurposed to support [vast.ai](https://vast.ai) and [RunPod](https://runpod.io).
 
 ## Features
 

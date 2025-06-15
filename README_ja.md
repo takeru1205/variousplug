@@ -1,6 +1,6 @@
 # variousplug[vp] - 様々なDockerホストへのプラグ
 
-`vp`は[fireplug](https://github.com/koheiw/fireplug)をベースに、[vast.ai](https://vast.ai)と[RunPod](https://runpod.io)をサポートするように再構築されたコマンドラインインターフェース（CLI）ツールです。
+`vp`は[fireplug](https://github.com/smly/fireplug)をベースに、[vast.ai](https://vast.ai)と[RunPod](https://runpod.io)をサポートするように再構築されたコマンドラインインターフェース（CLI）ツールです。
 
 ## 機能
 

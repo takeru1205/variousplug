@@ -28,7 +28,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Run full test suite
       run: |
@@ -71,7 +71,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Build package
       run: |

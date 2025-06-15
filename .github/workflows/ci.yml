@@ -23,7 +23,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Run ruff linter
       run: |
@@ -57,7 +57,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Run tests
       run: |
@@ -87,7 +87,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Run safety check (if available)
       run: |
@@ -126,7 +126,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Build package
       run: |
@@ -164,7 +164,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Run basic tests
       run: |
@@ -191,7 +191,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --group dev --group test
     
     - name: Run integration tests (when available)
       run: |

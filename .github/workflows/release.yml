@@ -78,17 +78,15 @@ jobs:
         uv build
     
     - name: Generate changelog
-      id: changelog
       run: |
-        CHANGELOG_CONTENT="## Changes
-        $(git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD)"
-        echo "CHANGELOG=$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
+        echo "## Changes" > release_notes.md
+        git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> release_notes.md
     
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         files: dist/*
-        body: ${{ steps.changelog.outputs.CHANGELOG }}
+        body_path: release_notes.md
         draft: false
         prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
     

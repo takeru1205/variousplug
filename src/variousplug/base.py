@@ -192,6 +192,7 @@ class DockerBuilder(IDockerBuilder):
         if self._docker_client is None:
             try:
                 import docker
+
                 self._docker_client = docker.from_env()
             except ImportError:
                 raise ImportError(

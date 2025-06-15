@@ -6,6 +6,7 @@ import subprocess
 from unittest.mock import Mock, patch
 
 import docker
+import docker.errors
 import pytest
 
 from variousplug.base import BasePlatformClient, DockerBuilder, NoOpFileSync, RsyncFileSync

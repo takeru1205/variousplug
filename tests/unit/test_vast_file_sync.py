@@ -32,7 +32,7 @@ class TestVastFileSync:
             status=InstanceStatus.RUNNING,
             ssh_host="test.host",
             ssh_port=22,
-            ssh_username="root"
+            ssh_username="root",
         )
 
         result = sync.upload_files(instance_info, "/local/path", "/workspace", ["*.pyc"])
@@ -61,7 +61,7 @@ class TestVastFileSync:
             status=InstanceStatus.RUNNING,
             ssh_host="test.host",
             ssh_port=22,
-            ssh_username="root"
+            ssh_username="root",
         )
 
         result = sync.upload_files(instance_info, "/local/path", "/workspace", [])
@@ -76,7 +76,7 @@ class TestVastFileSync:
             platform="vast",
             status=InstanceStatus.RUNNING,
             ssh_host=None,  # Missing SSH info
-            ssh_port=None
+            ssh_port=None,
         )
 
         result = sync.upload_files(instance_info, "/local/path", "/workspace", [])
@@ -95,7 +95,7 @@ class TestVastFileSync:
             status=InstanceStatus.RUNNING,
             ssh_host="test.host",
             ssh_port=22,
-            ssh_username="root"
+            ssh_username="root",
         )
 
         result = sync.upload_files(instance_info, "/local/path", "/workspace", [])
@@ -122,7 +122,7 @@ class TestVastFileSync:
             status=InstanceStatus.RUNNING,
             ssh_host="test.host",
             ssh_port=22,
-            ssh_username="root"
+            ssh_username="root",
         )
 
         result = sync.download_files(
@@ -158,7 +158,7 @@ class TestVastFileSync:
             status=InstanceStatus.RUNNING,
             ssh_host="test.host",
             ssh_port=22,
-            ssh_username="root"
+            ssh_username="root",
         )
 
         result = sync.download_files(
@@ -175,7 +175,7 @@ class TestVastFileSync:
             platform="vast",
             status=InstanceStatus.RUNNING,
             ssh_host=None,  # Missing SSH info
-            ssh_port=None
+            ssh_port=None,
         )
 
         result = sync.download_files(
@@ -196,7 +196,7 @@ class TestVastFileSync:
             status=InstanceStatus.RUNNING,
             ssh_host="test.host",
             ssh_port=22,
-            ssh_username="root"
+            ssh_username="root",
         )
 
         result = sync.download_files(

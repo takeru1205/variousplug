@@ -76,8 +76,13 @@ class SmartGroup(click.Group):
         super().__init__(**kwargs)
         # List of known subcommands
         self.known_subcommands = {
-            "run", "list-instances", "ls", "create-instance",
-            "destroy-instance", "config-show", "config-set"
+            "run",
+            "list-instances",
+            "ls",
+            "create-instance",
+            "destroy-instance",
+            "config-show",
+            "config-set",
         }
 
     def resolve_command(self, ctx, args):
@@ -97,28 +102,46 @@ class SmartGroup(click.Group):
         run_cmd = self.get_command(ctx, "run")
         return "run", run_cmd, []  # Return cmd_name, cmd, remaining_args
 
+
 @click.group(cls=SmartGroup, invoke_without_command=True)
 @click.option("--config", "-c", type=click.Path(), help="Path to config file")
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--init", is_flag=True, help="Initialize configuration")
-@click.option("--platform", "-p", type=click.Choice(["vast", "runpod", "auto"]), default="auto", help="Target platform")
+@click.option(
+    "--platform",
+    "-p",
+    type=click.Choice(["vast", "runpod", "auto"]),
+    default="auto",
+    help="Target platform",
+)
 @click.option("--instance-id", "-i", help="Specific instance ID to use")
 @click.option("--sync-only", is_flag=True, help="Only sync files, don't run command")
 @click.option("--no-sync", is_flag=True, help="Skip file synchronization")
 @click.pass_context
-def cli(ctx, config: str | None, verbose: bool, init: bool, platform: str, instance_id: str | None, sync_only: bool, no_sync: bool):  # noqa: ARG001
+def cli(
+    ctx,
+    config: str | None,  # noqa: ARG001
+    verbose: bool,
+    init: bool,
+    platform: str,
+    instance_id: str | None,
+    sync_only: bool,
+    no_sync: bool,
+):
     """VariousPlug: Run code on remote Docker hosts (vast.ai and RunPod)."""
 
     setup_logging(verbose)
 
     ctx.ensure_object(dict)
-    ctx.obj.update({
-        "verbose": verbose,
-        "platform": platform,
-        "instance_id": instance_id,
-        "sync_only": sync_only,
-        "no_sync": no_sync
-    })
+    ctx.obj.update(
+        {
+            "verbose": verbose,
+            "platform": platform,
+            "instance_id": instance_id,
+            "sync_only": sync_only,
+            "no_sync": no_sync,
+        }
+    )
 
     if init:
         initialize_config()
@@ -133,7 +156,9 @@ def cli(ctx, config: str | None, verbose: bool, init: bool, platform: str, insta
 @click.argument("command", nargs=-1, required=False)
 @click.option("--dockerfile", "-d", help="Custom Dockerfile path")
 @click.option("--working-dir", "-w", help="Working directory in container", default="/workspace")
-@click.option("--enable-docker", is_flag=True, help="Enable Docker build step (disabled by default)")
+@click.option(
+    "--enable-docker", is_flag=True, help="Enable Docker build step (disabled by default)"
+)
 @click.pass_context
 def run(
     ctx,

@@ -77,7 +77,12 @@ class ConfigManager(IConfigManager):
                 "vast": {"api_key": vast_api_key, "enabled": vast_api_key is not None},
                 "runpod": {"api_key": runpod_api_key, "enabled": runpod_api_key is not None},
             },
-            "docker": {"enabled": False, "build_context": ".", "dockerfile": "Dockerfile", "build_args": {}},
+            "docker": {
+                "enabled": False,
+                "build_context": ".",
+                "dockerfile": "Dockerfile",
+                "build_args": {},
+            },
             "sync": {
                 "exclude_patterns": [
                     ".git/",

@@ -7,8 +7,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-import pytest
-
 from variousplug.utils import (
     ExecutionResult,
     merge_exclude_patterns,
@@ -279,8 +277,8 @@ class TestPrintFunctions:
             # Should not raise exception
             try:
                 print_info("test")
-            except Exception:
-                pytest.fail("print_info should handle stdout errors gracefully")
+            except Exception as e:
+                raise AssertionError("print_info should handle stdout errors gracefully") from e
 
         with patch("sys.stderr") as mock_stderr:
             mock_stderr.write.side_effect = Exception("Write failed")
@@ -288,8 +286,8 @@ class TestPrintFunctions:
             # Should not raise exception
             try:
                 print_error("test")
-            except Exception:
-                pytest.fail("print_error should handle stderr errors gracefully")
+            except Exception as e:
+                raise AssertionError("print_error should handle stderr errors gracefully") from e
 
 
 class TestVpignoreFunctions:
@@ -316,7 +314,14 @@ node_modules/
 
             patterns = read_vpignore_patterns(tmpdir_path)
 
-            expected_patterns = [".venv/", "__pycache__/", "*.pyc", ".env", ".git/", "node_modules/"]
+            expected_patterns = [
+                ".venv/",
+                "__pycache__/",
+                "*.pyc",
+                ".env",
+                ".git/",
+                "node_modules/",
+            ]
             assert patterns == expected_patterns
 
     def test_read_vpignore_patterns_without_file(self):

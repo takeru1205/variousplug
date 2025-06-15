@@ -20,7 +20,7 @@ help:
 	@echo "Code Quality:"
 	@echo "  lint          Run all linting tools"
 	@echo "  format        Format code with black and isort"
-	@echo "  type-check    Run mypy type checking"
+	@echo "  type-check    Run ty type checks"
 	@echo ""
 	@echo "Build:"
 	@echo "  build         Build the package"
@@ -70,16 +70,16 @@ test-api:
 	uv run pytest -m "requires_api_key"
 
 # Code quality
-lint: lint-ruff lint-mypy
+lint: lint-ruff lint-ty
 	@echo "All linting completed!"
 
 lint-ruff:
 	@echo "Running ruff linter..."
 	uv run ruff check .
 
-lint-mypy:
-	@echo "Running mypy..."
-	uv run mypy src/
+lint-ty:
+	@echo "Running ty..."
+	uv run uvx ty check
 
 format:
 	@echo "Formatting code with ruff..."
@@ -92,8 +92,8 @@ format-check:
 	uv run ruff check .
 
 type-check:
-	@echo "Running type checking..."
-	uv run mypy src/
+	@echo "Running type checks..."
+	uv run uvx ty check
 
 # Build commands
 build:

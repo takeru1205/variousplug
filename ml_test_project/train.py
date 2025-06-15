@@ -17,6 +17,7 @@ LR = 1e-3
 # Ensure model directory exists
 os.makedirs(MODEL_DIR, exist_ok=True)
 
+
 def preprocess(df):
     # Basic preprocessing for Titanic dataset
     df = df.copy()
@@ -34,6 +35,7 @@ def preprocess(df):
     target = df["Survived"].values
     return torch.tensor(features, dtype=torch.float32), torch.tensor(target, dtype=torch.float32)
 
+
 class TitanicDataset(Dataset):
     def __init__(self, features, targets):
         self.X = features
@@ -45,15 +47,12 @@ class TitanicDataset(Dataset):
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
 
+
 class SimpleNet(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
         self.model = nn.Sequential(
-            nn.Linear(input_dim, 64),
-            nn.ReLU(),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1)
+            nn.Linear(input_dim, 64), nn.ReLU(), nn.Linear(64, 32), nn.ReLU(), nn.Linear(32, 1)
         )
 
     def forward(self, x):
@@ -100,6 +99,7 @@ def train():
     save_path = os.path.join(MODEL_DIR, "titanic_model.pth")
     torch.save(model.state_dict(), save_path)
     print(f"Model saved to {save_path}")
+
 
 if __name__ == "__main__":
     train()

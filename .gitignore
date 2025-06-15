@@ -196,9 +196,8 @@ cython_debug/
 # VariousPlug specific
 .vp/
 .vpignore
-data/
 Dockerfile
 
-ml_test_project/data/*
-ml_test_project/models/*
-ml_test_project/results/*
+ml_test_project/data/*.csv
+ml_test_project/models/*.pth
+ml_test_project/results/*.csv

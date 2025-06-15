@@ -49,7 +49,11 @@ class ExecutionResult:
     """Result of command execution."""
 
     def __init__(
-        self, success: bool, output: str | None = "", error: str | None = "", exit_code: int = 0
+        self,
+        success: bool,
+        output: str | None = "",
+        error: str | None = "",
+        exit_code: int | None = 0,
     ):
         self.success = success
         self.output = output

@@ -3,7 +3,7 @@ Vast.ai client integration for VariousPlug following SOLID principles.
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from vastai_sdk import VastAI
 
@@ -75,9 +75,9 @@ class VastClient(BasePlatformClient):
                 params["instance_type"] = request.instance_type
 
             # Add additional parameters but preserve cost optimizations
-            if request.additional_params:
+            if request.additional_params is not None:
                 # Don't override cost-sensitive parameters unless explicitly requested
-                for key, value in request.additional_params.items():
+                for key, value in cast("dict[str, Any]", request.additional_params).items():
                     if key not in ["price", "disk_gb", "direct_port_count"]:
                         params[key] = value
                     elif key == "price":
@@ -175,7 +175,9 @@ class VastClient(BasePlatformClient):
         except Exception as e:
             raise Exception(f"Direct API call failed: {e}") from e
 
-    def execute_command(self, instance_id: str, command: list[str], working_dir: str = "/workspace") -> ExecutionResult:
+    def execute_command(
+        self, instance_id: str, command: list[str], working_dir: str = "/workspace"
+    ) -> ExecutionResult:
         """Execute a command on an instance."""
         try:
             # Get instance details for validation

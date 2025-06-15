@@ -113,7 +113,9 @@ class RunPodClient(BasePlatformClient):
             logger.error(f"Failed to destroy RunPod instance {instance_id}: {e}")
             raise
 
-    def execute_command(self, instance_id: str, command: list[str], working_dir: str = "/workspace") -> ExecutionResult:
+    def execute_command(
+        self, instance_id: str, command: list[str], working_dir: str = "/workspace"
+    ) -> ExecutionResult:
         """Execute a command on a RunPod pod via SSH."""
         try:
             # Get pod details

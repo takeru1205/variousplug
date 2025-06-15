@@ -111,7 +111,7 @@ class MockPlatformClient(IPlatformClient):
     def list_instances(self) -> list[InstanceInfo]:
         return self.instances
 
-    def get_instance(self, instance_id: str) -> InstanceInfo:
+    def get_instance(self, instance_id: str) -> InstanceInfo | None:
         for instance in self.instances:
             if instance.id == instance_id:
                 return instance

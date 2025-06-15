@@ -2,6 +2,7 @@
 Unit tests for Vast.ai client.
 """
 
+from typing import cast
 from unittest.mock import Mock, patch
 
 import pytest
@@ -264,7 +265,8 @@ class TestVastClient:
         result = client.execute_command("12345", ["python", "--version"])
 
         assert result.success is True
-        assert "Python" in result.output
+        assert result.output is not None
+        assert "Python" in cast("str", result.output)
 
     @patch("variousplug.vast_client.VastAI")
     @patch("subprocess.run")
@@ -318,7 +320,8 @@ class TestVastClient:
 
         # Should fallback to simulation
         assert result.success is True
-        assert "simulated execution" in result.output.lower()
+        assert result.output is not None
+        assert "simulated execution" in cast("str", result.output).lower()
 
     @patch("variousplug.vast_client.VastAI")
     def test_execute_command_instance_not_found(self, mock_vast_ai):
@@ -331,7 +334,8 @@ class TestVastClient:
         result = client.execute_command("nonexistent", ["echo", "test"])
 
         assert result.success is False
-        assert "not found" in result.error
+        assert result.error is not None
+        assert "not found" in cast("str", result.error)
 
     @patch("variousplug.vast_client.VastAI")
     def test_execute_command_instance_not_running(self, mock_vast_ai):
@@ -347,7 +351,8 @@ class TestVastClient:
         result = client.execute_command("12345", ["echo", "test"])
 
         assert result.success is False
-        assert "not running" in result.error
+        assert result.error is not None
+        assert "not running" in cast("str", result.error)
 
     def test_create_instance_info_full_data(self):
         """Test _create_instance_info with full data."""

@@ -37,7 +37,7 @@ class BasePlatformClient(IPlatformClient):
         """Abstract method for creating platform-specific client."""
         raise NotImplementedError("Subclasses must implement _create_client")
 
-    def _normalize_status(self, raw_status: str) -> InstanceStatus:
+    def _normalize_status(self, raw_status: str | None) -> InstanceStatus:
         """Common status normalization logic."""
         if raw_status is None:
             return InstanceStatus.UNKNOWN
@@ -55,7 +55,8 @@ class BasePlatformClient(IPlatformClient):
             "error": InstanceStatus.ERROR,
             "failed": InstanceStatus.ERROR,
         }
-        return status_map.get(raw_status.lower(), InstanceStatus.UNKNOWN)
+        result = status_map.get(raw_status.lower())
+        return result if result is not None else InstanceStatus.UNKNOWN
 
     def _create_instance_info(self, raw_data: dict[str, Any]) -> InstanceInfo:
         """Template method for creating standardized instance info."""
@@ -287,7 +288,9 @@ class VastFileSync(IFileSync):
                 print_error("SSH connection info not available")
                 return False
 
-            print_info(f"Uploading to {instance_info.ssh_username}@{instance_info.ssh_host}:{instance_info.ssh_port}")
+            print_info(
+                f"Uploading to {instance_info.ssh_username}@{instance_info.ssh_host}:{instance_info.ssh_port}"
+            )
 
             # Build rsync command with exclusions
             rsync_cmd = [
@@ -303,19 +306,26 @@ class VastFileSync(IFileSync):
 
             # Add SSH options
             ssh_options = [
-                "-p", str(instance_info.ssh_port),
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
-                "-o", "LogLevel=ERROR",
+                "-p",
+                str(instance_info.ssh_port),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "LogLevel=ERROR",
             ]
             rsync_cmd.extend(["-e", f"ssh {' '.join(ssh_options)}"])
 
             # Add source and destination
             rsync_cmd.append(f"{local_path}/")
-            rsync_cmd.append(f"{instance_info.ssh_username}@{instance_info.ssh_host}:{remote_path}/")
+            rsync_cmd.append(
+                f"{instance_info.ssh_username}@{instance_info.ssh_host}:{remote_path}/"
+            )
 
             # Execute rsync
             import subprocess
+
             result = subprocess.run(rsync_cmd, capture_output=True, text=True, timeout=300)
 
             if result.returncode == 0:
@@ -338,7 +348,9 @@ class VastFileSync(IFileSync):
                 print_error("SSH connection info not available")
                 return False
 
-            print_info(f"Downloading from {instance_info.ssh_username}@{instance_info.ssh_host}:{instance_info.ssh_port}")
+            print_info(
+                f"Downloading from {instance_info.ssh_username}@{instance_info.ssh_host}:{instance_info.ssh_port}"
+            )
 
             # Ensure local directory exists
             Path(local_path).mkdir(parents=True, exist_ok=True)
@@ -352,19 +364,26 @@ class VastFileSync(IFileSync):
 
             # Add SSH options
             ssh_options = [
-                "-p", str(instance_info.ssh_port),
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
-                "-o", "LogLevel=ERROR",
+                "-p",
+                str(instance_info.ssh_port),
+                "-o",
+                "StrictHostKeyChecking=no",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "LogLevel=ERROR",
             ]
             rsync_cmd.extend(["-e", f"ssh {' '.join(ssh_options)}"])
 
             # Add source and destination
-            rsync_cmd.append(f"{instance_info.ssh_username}@{instance_info.ssh_host}:{remote_path}/")
+            rsync_cmd.append(
+                f"{instance_info.ssh_username}@{instance_info.ssh_host}:{remote_path}/"
+            )
             rsync_cmd.append(f"{local_path}/")
 
             # Execute rsync
             import subprocess
+
             result = subprocess.run(rsync_cmd, capture_output=True, text=True, timeout=300)
 
             if result.returncode == 0:

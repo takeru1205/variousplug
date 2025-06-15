@@ -38,7 +38,7 @@ jobs:
       run: |
         uv run ruff check .
         uv run ruff format --check .
-        uv run mypy src/
+        uv run uvx ty check
     
     - name: Build package
       run: |

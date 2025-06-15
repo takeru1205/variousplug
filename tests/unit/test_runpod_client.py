@@ -3,6 +3,7 @@ Unit tests for RunPod client.
 """
 
 import subprocess
+from typing import cast
 from unittest.mock import Mock, patch
 
 import pytest
@@ -217,7 +218,8 @@ class TestRunPodClient:
         result = client.execute_command("pod_123", ["python", "--version"])
 
         assert result.success is True
-        assert "Python" in result.output
+        assert result.output is not None
+        assert "Python" in cast("str", result.output)
 
     @patch("variousplug.runpod_client.runpod")
     @patch("subprocess.run")
@@ -253,7 +255,8 @@ class TestRunPodClient:
         result = client.execute_command("nonexistent", ["echo", "test"])
 
         assert result.success is False
-        assert "not found" in result.error
+        assert result.error is not None
+        assert "not found" in cast("str", result.error)
 
     @patch("variousplug.runpod_client.runpod")
     def test_execute_command_instance_not_running(self, mock_runpod):
@@ -265,7 +268,8 @@ class TestRunPodClient:
         result = client.execute_command("pod_123", ["echo", "test"])
 
         assert result.success is False
-        assert "not running" in result.error
+        assert result.error is not None
+        assert "not running" in cast("str", result.error)
 
     def test_create_instance_info_with_ssh(self):
         """Test _create_instance_info with SSH information."""
@@ -369,7 +373,8 @@ class TestRunPodClient:
         result = client.execute_command("pod_123", ["sleep", "1000"])
 
         assert result.success is False
-        assert "timed out" in result.error
+        assert result.error is not None
+        assert "timed out" in cast("str", result.error)
 
     def test_create_instance_info_minimal_data(self):
         """Test _create_instance_info with minimal data."""
